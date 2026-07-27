@@ -396,7 +396,7 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 </div></div>
 
 <div class="overlay" id="m-cliente"><div class="modal">
-  <div class="modal-head"><h3>Nuevo cliente</h3><button class="modal-close" onclick="closeModal('m-cliente')">&#x2715;</button></div>
+  <div class="modal-head"><h3 id="m-cliente-titulo">Nuevo cliente</h3><button class="modal-close" onclick="closeModal('m-cliente')">&#x2715;</button></div>
   <div class="modal-body">
     <div class="fl"><label>Nombre</label><input id="cl-nombre" type="text"></div>
     <div class="fl"><label>Tipo</label><select id="cl-tipo"><option value="b2b">Cafeteria / Negocio</option><option value="b2c">Particular</option></select></div>
@@ -406,7 +406,7 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-cliente')">Cancelar</button>
-    <button class="btn btn-dark" onclick="guardarCliente()">Guardar</button>
+    <button class="btn btn-dark" id="m-cliente-btn" onclick="guardarCliente()">Guardar</button>
   </div>
 </div></div>
 
@@ -969,18 +969,46 @@ function renderClientes(){
         ${c.direccion?`<span>${c.direccion}</span>`:''}
       </div>
       <div class="row-actions">
+        <button class="btn btn-sm" onclick="abrirEditarCliente(${c.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminar('clientes',${c.id})">Eliminar</button>
       </div>
     </div>`).join('');
 }
 
+let _editClienteId = null;
+
+function abrirEditarCliente(id){
+  const c = D.clientes.find(x=>x.id===id);
+  if(!c) return;
+  _editClienteId = id;
+  document.getElementById('m-cliente-titulo').textContent = 'Editar cliente';
+  document.getElementById('cl-nombre').value = c.nombre||'';
+  document.getElementById('cl-tipo').value = c.tipo||'b2b';
+  document.getElementById('cl-tel').value = c.telefono||'';
+  document.getElementById('cl-email').value = c.email||'';
+  document.getElementById('cl-dir').value = c.direccion||'';
+  document.getElementById('m-cliente-btn').textContent = 'Guardar cambios';
+  openModal('m-cliente');
+}
+
 async function guardarCliente(){
   const nombre=document.getElementById('cl-nombre').value.trim();
   if(!nombre) return alert('Ingresa el nombre.');
-  const n=await api('POST','/api/clientes',{nombre,tipo:document.getElementById('cl-tipo').value,
+  const body={nombre,tipo:document.getElementById('cl-tipo').value,
     telefono:document.getElementById('cl-tel').value,email:document.getElementById('cl-email').value,
-    direccion:document.getElementById('cl-dir').value});
-  D.clientes.push(n); closeModal('m-cliente'); renderClientes();
+    direccion:document.getElementById('cl-dir').value};
+  if(_editClienteId){
+    const n=await api('PUT','/api/clientes/'+_editClienteId,body);
+    const i=D.clientes.findIndex(x=>x.id===_editClienteId);
+    if(i>=0) D.clientes[i]=n;
+  } else {
+    const n=await api('POST','/api/clientes',body);
+    D.clientes.push(n);
+  }
+  _editClienteId=null;
+  document.getElementById('m-cliente-titulo').textContent='Nuevo cliente';
+  document.getElementById('m-cliente-btn').textContent='Guardar';
+  closeModal('m-cliente'); renderClientes();
 }
 
 // ─── USUARIOS ──────────────────────────────────────────────────────────────────
