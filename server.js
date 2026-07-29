@@ -327,17 +327,28 @@ app.delete('/api/clientes/:id', auth, async (req, res) => {
 
 // ─── PRODUCTOS ────────────────────────────────────────────────────────────────
 app.get('/api/productos', auth, async (req, res) => {
-  const r = await pool.query('SELECT * FROM ct_productos WHERE activo=TRUE ORDER BY peso_g');
+  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS tipo_tueste VARCHAR(50)');
+  const r = await pool.query('SELECT * FROM ct_productos WHERE activo=TRUE ORDER BY nombre');
   res.json(r.rows);
 });
 app.put('/api/productos/:id', auth, async (req, res) => {
-  const { nombre,precio } = req.body;
-  const r = await pool.query('UPDATE ct_productos SET nombre=$1,precio=$2 WHERE id=$3 RETURNING *', [nombre,precio,req.params.id]);
+  const { nombre, presentacion, peso_g, precio, tipo_tueste } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_productos SET nombre=$1,presentacion=$2,peso_g=$3,precio=$4,tipo_tueste=$5 WHERE id=$6 RETURNING *',
+    [nombre, presentacion, peso_g||null, precio||0, tipo_tueste||null, req.params.id]
+  );
   res.json(r.rows[0]);
 });
+app.delete('/api/productos/:id', auth, async (req, res) => {
+  await pool.query('UPDATE ct_productos SET activo=FALSE WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
 app.post('/api/productos', auth, async (req, res) => {
-  const { nombre,presentacion,peso_g,precio } = req.body;
-  const r = await pool.query('INSERT INTO ct_productos (nombre,presentacion,peso_g,precio) VALUES ($1,$2,$3,$4) RETURNING *', [nombre,presentacion,peso_g||null,precio||0]);
+  const { nombre, presentacion, peso_g, precio, tipo_tueste } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_productos (nombre,presentacion,peso_g,precio,tipo_tueste) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+    [nombre, presentacion||null, peso_g||null, precio||0, tipo_tueste||null]
+  );
   res.json(r.rows[0]);
 });
 
