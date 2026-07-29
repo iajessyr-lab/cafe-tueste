@@ -344,9 +344,17 @@ app.get('/api/clientes', auth, async (req, res) => {
   res.json(r.rows);
 });
 app.post('/api/clientes', auth, async (req, res) => {
-  const { nombre,tipo,telefono,email,direccion,notas } = req.body;
-  const r = await pool.query('INSERT INTO ct_clientes (nombre,tipo,telefono,email,direccion,notas) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-    [nombre,tipo||'b2b',telefono,email,direccion,notas]);
+  const { nombre,tipo,telefono,email,direccion,notas,rfc,razon_social } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_clientes (nombre,tipo,telefono,email,direccion,notas,rfc,razon_social) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+    [nombre,tipo||'b2b',telefono||null,email||null,direccion||null,notas||null,rfc||null,razon_social||null]);
+  res.json(r.rows[0]);
+});
+app.put('/api/clientes/:id', auth, async (req, res) => {
+  const { nombre,tipo,telefono,email,direccion,notas,rfc,razon_social } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_clientes SET nombre=$1,tipo=$2,telefono=$3,email=$4,direccion=$5,notas=$6,rfc=$7,razon_social=$8 WHERE id=$9 RETURNING *',
+    [nombre,tipo||'b2b',telefono||null,email||null,direccion||null,notas||null,rfc||null,razon_social||null,req.params.id]);
   res.json(r.rows[0]);
 });
 app.delete('/api/clientes/:id', auth, async (req, res) => {
