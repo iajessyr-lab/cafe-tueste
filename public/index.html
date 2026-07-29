@@ -393,6 +393,26 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
     <div id="pedido-items"></div>
     <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="addItem()">+ Agregar producto</button>
     <div style="margin-top:14px;text-align:right;font-size:.9rem;font-weight:700">Total: <span id="pedido-total">$0.00</span></div>
+    <div style="border-top:1px solid #f0f0f0;margin-top:16px;padding-top:14px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:600;color:#444">
+        <input type="checkbox" id="p-factura" onchange="toggleFacturaFields()" style="width:16px;height:16px;cursor:pointer">
+        Requiere factura
+      </label>
+      <div id="p-factura-fields" style="display:none;margin-top:12px">
+        <div class="fg" style="grid-template-columns:1fr 1fr">
+          <div class="fl"><label>RFC</label><input id="p-rfc" type="text" placeholder="ej. ROSJ900101ABC" style="text-transform:uppercase"></div>
+          <div class="fl"><label>Razon social</label><input id="p-razon" type="text" placeholder="ej. Jesus Rosas SA de CV"></div>
+          <div class="fl"><label>Uso CFDI</label>
+            <select id="p-cfdi">
+              <option value="G01">G01 - Adquisicion de mercancias</option>
+              <option value="G03">G03 - Gastos en general</option>
+              <option value="D01">D01 - Honorarios medicos</option>
+              <option value="P01">P01 - Por definir</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-pedido')">Cancelar</button>
@@ -442,6 +462,11 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
     <div class="fl"><label>Telefono</label><input id="cl-tel" type="text"></div>
     <div class="fl"><label>Email</label><input id="cl-email" type="email"></div>
     <div class="fl"><label>Direccion</label><input id="cl-dir" type="text"></div>
+    <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#aaa;margin:10px 0 6px;border-top:1px solid #f0f0f0;padding-top:10px">Datos fiscales (opcional)</div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>RFC</label><input id="cl-rfc" type="text" placeholder="ej. ROSJ900101ABC"></div>
+      <div class="fl"><label>Razon social</label><input id="cl-razon" type="text" placeholder="ej. Jesus Rosas SA de CV"></div>
+    </div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-cliente')">Cancelar</button>
@@ -872,14 +897,21 @@ async function guardarVerde() {
 let pedidoItems = [];
 let _editPedidoId = null;
 
+function toggleFacturaFields() {
+  const checked = document.getElementById('p-factura').checked;
+  document.getElementById('p-factura-fields').style.display = checked ? 'block' : 'none';
+}
+
 function initPedidoForm() {
   _editPedidoId=null;
   pedidoItems=[];
-  ['p-cliente','p-nota'].forEach(i=>document.getElementById(i).value='');
+  ['p-cliente','p-nota','p-rfc','p-razon'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('p-fecha').value=hoy();
   document.getElementById('p-entrega').value='';
   document.getElementById('pedido-items').innerHTML='';
   document.getElementById('pedido-total').textContent='$0.00';
+  document.getElementById('p-factura').checked=false;
+  document.getElementById('p-factura-fields').style.display='none';
   const chip=document.getElementById('p-cliente-chip');
   chip.textContent='Seleccionar cliente';
   chip.classList.remove('has-val');
@@ -900,6 +932,13 @@ function abrirEditarPedido(id){
   document.getElementById('p-fecha').value=p.fecha_pedido?p.fecha_pedido.slice(0,10):'';
   document.getElementById('p-entrega').value=p.fecha_entrega?p.fecha_entrega.slice(0,10):'';
   document.getElementById('p-nota').value=p.nota||'';
+  if(p.requiere_factura){
+    document.getElementById('p-factura').checked=true;
+    document.getElementById('p-factura-fields').style.display='block';
+    document.getElementById('p-rfc').value=p.rfc||'';
+    document.getElementById('p-razon').value=p.razon_social||'';
+    if(p.uso_cfdi) document.getElementById('p-cfdi').value=p.uso_cfdi;
+  }
   document.querySelector('#m-pedido .modal-head h3').textContent='Editar pedido';
   document.querySelector('#m-pedido .btn-dark').textContent='Guardar cambios';
   const items=Array.isArray(p.items)?p.items.filter(Boolean):[];
@@ -994,6 +1033,14 @@ function seleccionarCliente(id,nombre,tipo){
   chip.textContent=nombre;
   chip.classList.add('has-val');
   document.getElementById('p-cliente-drop').style.display='none';
+  // auto-rellenar datos fiscales si el cliente los tiene
+  const c=D.clientes.find(x=>x.id===id);
+  if(c?.rfc){ document.getElementById('p-rfc').value=c.rfc; }
+  if(c?.razon_social){ document.getElementById('p-razon').value=c.razon_social; }
+  if(c?.rfc||c?.razon_social){
+    document.getElementById('p-factura').checked=true;
+    document.getElementById('p-factura-fields').style.display='block';
+  }
 }
 
 document.addEventListener('click',function(e){
@@ -1012,9 +1059,14 @@ async function guardarPedido() {
     if(desc) items.push({descripcion:desc,cantidad:cant,unidad:'pza',precio_unitario:precio,subtotal:cant*precio});
   });
   const total=items.reduce((a,i)=>a+i.subtotal,0);
+  const requiere_factura=document.getElementById('p-factura').checked;
   const body={cliente_nombre:cliente,fecha_pedido:document.getElementById('p-fecha').value||hoy(),
     fecha_entrega:document.getElementById('p-entrega').value||null,
-    nota:document.getElementById('p-nota').value.trim(),total,items};
+    nota:document.getElementById('p-nota').value.trim(),total,items,
+    requiere_factura,
+    rfc:requiere_factura?document.getElementById('p-rfc').value.trim().toUpperCase():null,
+    razon_social:requiere_factura?document.getElementById('p-razon').value.trim():null,
+    uso_cfdi:requiere_factura?document.getElementById('p-cfdi').value:null};
   if(_editPedidoId){
     const n=await api('PUT','/api/pedidos/'+_editPedidoId,body);
     const i=D.pedidos.findIndex(x=>x.id===_editPedidoId);
@@ -1035,9 +1087,17 @@ function renderPedidos() {
   if(!lista.length){el.innerHTML='<div class="empty">Sin pedidos registrados.</div>';return;}
   el.innerHTML=lista.map(p=>{
     const items=Array.isArray(p.items)?p.items.filter(Boolean):[];
+    const factBadge = p.requiere_factura
+      ? (p.factura_emitida
+          ? `<span class="badge b-green" style="font-size:.65rem">Factura emitida</span>`
+          : `<span class="badge b-yellow" style="font-size:.65rem">Factura pendiente</span>`)
+      : '';
     return `<div class="row">
       <div class="row-top">
-        <div><span class="row-title">${p.cliente_nombre}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="row-title">${p.cliente_nombre}</span>
+          ${factBadge}
+        </div>
         <span class="badge ${bMap[p.estado]||'b-gray'}">${lMap[p.estado]||p.estado}</span>
       </div>
       <div class="row-meta">
@@ -1045,17 +1105,25 @@ function renderPedidos() {
         ${p.fecha_entrega?`<span>Entrega ${fmt(p.fecha_entrega)}</span>`:''}
         <span>${$m(p.total)}</span>
         ${p.nota?`<span>${p.nota}</span>`:''}
+        ${p.requiere_factura&&p.rfc?`<span style="color:#888">RFC: ${p.rfc}${p.razon_social?' · '+p.razon_social:''}</span>`:''}
       </div>
       ${items.length?`<div style="margin-top:8px;font-size:.78rem;color:#777">${items.map(i=>`${i.descripcion} x${i.cantidad}`).join(' · ')}</div>`:''}
       <div class="row-actions">
         ${p.estado==='pendiente'?`<button class="btn btn-sm" onclick="avanzarPedido(${p.id},'en-camino')">En camino</button>`:''}
         ${p.estado==='en-camino'?`<button class="btn btn-sm btn-sm-green" onclick="avanzarPedido(${p.id},'entregado')">Entregado</button>`:''}
         ${p.estado==='entregado'?`<button class="btn btn-sm" onclick="avanzarPedido(${p.id},'pendiente')">Reabrir</button>`:''}
+        ${p.requiere_factura&&!p.factura_emitida?`<button class="btn btn-sm btn-sm-green" onclick="marcarFacturaEmitida(${p.id})">Factura emitida</button>`:''}
         <button class="btn btn-sm" onclick="abrirEditarPedido(${p.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminar('pedidos',${p.id})">Eliminar</button>
       </div>
     </div>`;
   }).join('');
+}
+
+async function marcarFacturaEmitida(id){
+  const r=await api('PUT',`/api/pedidos/${id}/factura`,{factura_emitida:true});
+  const p=D.pedidos.find(x=>x.id===id); if(p) Object.assign(p,r);
+  renderPedidos();
 }
 
 async function avanzarPedido(id,estado){
@@ -1175,6 +1243,8 @@ function abrirEditarCliente(id){
   document.getElementById('cl-tel').value = c.telefono||'';
   document.getElementById('cl-email').value = c.email||'';
   document.getElementById('cl-dir').value = c.direccion||'';
+  document.getElementById('cl-rfc').value = c.rfc||'';
+  document.getElementById('cl-razon').value = c.razon_social||'';
   document.getElementById('m-cliente-btn').textContent = 'Guardar cambios';
   openModal('m-cliente');
 }
@@ -1184,7 +1254,9 @@ async function guardarCliente(){
   if(!nombre) return alert('Ingresa el nombre.');
   const body={nombre,tipo:document.getElementById('cl-tipo').value,
     telefono:document.getElementById('cl-tel').value,email:document.getElementById('cl-email').value,
-    direccion:document.getElementById('cl-dir').value};
+    direccion:document.getElementById('cl-dir').value,
+    rfc:document.getElementById('cl-rfc').value.trim().toUpperCase(),
+    razon_social:document.getElementById('cl-razon').value.trim()};
   if(_editClienteId){
     const n=await api('PUT','/api/clientes/'+_editClienteId,body);
     const i=D.clientes.findIndex(x=>x.id===_editClienteId);

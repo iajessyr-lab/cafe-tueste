@@ -383,6 +383,13 @@ app.post('/api/productos', auth, async (req, res) => {
 
 // ─── PEDIDOS ──────────────────────────────────────────────────────────────────
 app.get('/api/pedidos', auth, async (req, res) => {
+  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS requiere_factura BOOLEAN DEFAULT FALSE');
+  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS rfc VARCHAR(20)');
+  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300)');
+  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS uso_cfdi VARCHAR(100)');
+  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS factura_emitida BOOLEAN DEFAULT FALSE');
+  await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS rfc VARCHAR(20)');
+  await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300)');
   const r = await pool.query(`
     SELECT p.*, json_agg(pi.*) as items
     FROM ct_pedidos p
@@ -390,12 +397,19 @@ app.get('/api/pedidos', auth, async (req, res) => {
     GROUP BY p.id ORDER BY p.creado_en DESC`);
   res.json(r.rows);
 });
+app.put('/api/pedidos/:id/factura', auth, async (req, res) => {
+  const r = await pool.query(
+    'UPDATE ct_pedidos SET factura_emitida=$1 WHERE id=$2 RETURNING *',
+    [req.body.factura_emitida, req.params.id]
+  );
+  res.json(r.rows[0]);
+});
 app.post('/api/pedidos', auth, async (req, res) => {
-  const { cliente_id,cliente_nombre,fecha_pedido,fecha_entrega,nota,items } = req.body;
+  const { cliente_id,cliente_nombre,fecha_pedido,fecha_entrega,nota,items,requiere_factura,rfc,razon_social,uso_cfdi } = req.body;
   const total = (items||[]).reduce((a,i)=>a+parseFloat(i.subtotal||0),0);
   const r = await pool.query(
-    'INSERT INTO ct_pedidos (cliente_id,cliente_nombre,fecha_pedido,fecha_entrega,total,nota) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-    [cliente_id||null,cliente_nombre,fecha_pedido,fecha_entrega||null,total,nota]
+    'INSERT INTO ct_pedidos (cliente_id,cliente_nombre,fecha_pedido,fecha_entrega,total,nota,requiere_factura,rfc,razon_social,uso_cfdi) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',
+    [cliente_id||null,cliente_nombre,fecha_pedido,fecha_entrega||null,total,nota,requiere_factura||false,rfc||null,razon_social||null,uso_cfdi||null]
   );
   const pedido = r.rows[0];
   for (const item of (items||[])) {
@@ -414,10 +428,10 @@ app.put('/api/pedidos/:id/estado', auth, async (req, res) => {
   res.json(r.rows[0]);
 });
 app.put('/api/pedidos/:id', auth, async (req, res) => {
-  const { cliente_nombre, fecha_pedido, fecha_entrega, nota, total, items } = req.body;
+  const { cliente_nombre, fecha_pedido, fecha_entrega, nota, total, items, requiere_factura, rfc, razon_social, uso_cfdi } = req.body;
   const r = await pool.query(
-    'UPDATE ct_pedidos SET cliente_nombre=$1,fecha_pedido=$2,fecha_entrega=$3,nota=$4,total=$5 WHERE id=$6 RETURNING *',
-    [cliente_nombre, fecha_pedido, fecha_entrega||null, nota, total||0, req.params.id]
+    'UPDATE ct_pedidos SET cliente_nombre=$1,fecha_pedido=$2,fecha_entrega=$3,nota=$4,total=$5,requiere_factura=$6,rfc=$7,razon_social=$8,uso_cfdi=$9 WHERE id=$10 RETURNING *',
+    [cliente_nombre, fecha_pedido, fecha_entrega||null, nota, total||0, requiere_factura||false, rfc||null, razon_social||null, uso_cfdi||null, req.params.id]
   );
   if (items) {
     await pool.query('DELETE FROM ct_pedido_items WHERE pedido_id=$1', [req.params.id]);
