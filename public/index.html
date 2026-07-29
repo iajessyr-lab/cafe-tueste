@@ -512,7 +512,14 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <div class="fl"><label>Fecha de entrega</label><input id="ent-fecha" type="date"></div>
       <div class="fl"><label>Kg totales</label><input id="ent-kg" type="number" step="0.1" placeholder="0.0"></div>
     </div>
-    <div class="fl"><label>Productos / detalle</label><input id="ent-productos" type="text" placeholder="ej. 10x Bolsa 1kg Castelan Medio Alto"></div>
+    <div class="fl"><label>Productos</label>
+      <select id="ent-producto-sel" onchange="agregarProductoEntrega()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.88rem;background:#fff;margin-bottom:6px">
+        <option value="">-- Seleccionar del catalogo --</option>
+      </select>
+      <div id="ent-items" style="margin-bottom:6px"></div>
+      <input id="ent-productos" type="hidden">
+      <input id="ent-productos-txt" type="text" placeholder="o escribe manualmente..." style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.88rem">
+    </div>
     <div class="fl"><label>Notas</label><input id="ent-notas" type="text" placeholder="Instrucciones especiales..."></div>
   </div>
   <div class="modal-footer">
@@ -613,7 +620,7 @@ const ACTIONS = {
   cobros: ()=>`<button class="btn btn-dark" onclick="openModal('m-cobro');document.getElementById('c-fecha').value=hoy()">+ Registrar cobro</button>`,
   clientes: ()=>`<button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button>`,
   productos: ()=>`<button class="btn btn-dark" onclick="abrirProducto()">+ Nuevo producto</button>`,
-  sucursales: ()=>`<button class="btn btn-dark" onclick="openModal('m-entrega')">+ Nueva entrega</button>`,
+  sucursales: ()=>`<button class="btn btn-dark" onclick="resetEntregaForm();poblarProductosEntrega();openModal('m-entrega')">+ Nueva entrega</button>`,
   usuarios: ()=>`<button class="btn btn-dark" onclick="openModal('m-usuario')">+ Crear usuario</button>`,
 };
 
@@ -1381,8 +1388,59 @@ let D_entregas = {};
 let _sucursalActiva = null;
 let _editEntregaId = null;
 
+let _entregaItems = [];
+
+function poblarProductosEntrega() {
+  const sel = document.getElementById('ent-producto-sel');
+  sel.innerHTML = '<option value="">-- Seleccionar del catalogo --</option>' +
+    D.productos.map(p=>`<option value="${p.id}" data-nombre="${p.nombre}">${p.nombre}</option>`).join('');
+}
+
+function agregarProductoEntrega() {
+  const sel = document.getElementById('ent-producto-sel');
+  const opt = sel.options[sel.selectedIndex];
+  if(!opt.value) return;
+  const nombre = opt.dataset.nombre;
+  const id = 'ei-'+Date.now();
+  _entregaItems.push({id, nombre, cantidad:1});
+  const div = document.createElement('div');
+  div.id = id;
+  div.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;background:#f5f5f5;border-radius:7px;padding:7px 10px';
+  div.innerHTML = `<span style="flex:1;font-size:.84rem;font-weight:600">${nombre}</span>
+    <input type="number" value="1" min="1" step="1" style="width:60px;padding:4px 8px;border:1.5px solid #ddd;border-radius:6px;font-size:.84rem" oninput="actualizarResumenEntrega()">
+    <span style="font-size:.78rem;color:#888">uds</span>
+    <button onclick="document.getElementById('${id}').remove();actualizarResumenEntrega()" style="background:none;border:none;color:#bbb;cursor:pointer;font-size:1rem">&#x2715;</button>`;
+  document.getElementById('ent-items').appendChild(div);
+  sel.value = '';
+  actualizarResumenEntrega();
+}
+
+function actualizarResumenEntrega() {
+  const resumen = [];
+  document.querySelectorAll('#ent-items > div[id]').forEach(div=>{
+    const nombre = div.querySelector('span').textContent;
+    const cant = div.querySelector('input')?.value||1;
+    resumen.push(`${cant}x ${nombre}`);
+  });
+  document.getElementById('ent-productos').value = resumen.join(', ');
+}
+
+function resetEntregaForm() {
+  _entregaItems=[];
+  document.getElementById('ent-items').innerHTML='';
+  document.getElementById('ent-productos').value='';
+  document.getElementById('ent-productos-txt').value='';
+  document.getElementById('ent-kg').value='';
+  document.getElementById('ent-fecha').value='';
+  document.getElementById('ent-notas').value='';
+  document.getElementById('m-entrega-titulo').textContent='Nueva entrega';
+  document.getElementById('m-entrega-btn').textContent='Guardar';
+  _editEntregaId=null;
+}
+
 async function renderSucursales() {
   D_sucursales = await api('GET', '/api/sucursales');
+  poblarProductosEntrega();
   // poblar select del modal
   const sel = document.getElementById('ent-sucursal');
   sel.innerHTML = D_sucursales.map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
@@ -1449,11 +1507,13 @@ function abrirEditarEntrega(id) {
   const e = todas.find(x=>x.id===id);
   if(!e) return;
   _editEntregaId = id;
+  resetEntregaForm();
+  _editEntregaId = id;
   document.getElementById('m-entrega-titulo').textContent = 'Editar entrega';
   document.getElementById('ent-sucursal').value = e.sucursal_id;
   document.getElementById('ent-fecha').value = e.fecha ? e.fecha.slice(0,10) : '';
   document.getElementById('ent-kg').value = e.kg_total||'';
-  document.getElementById('ent-productos').value = e.productos||'';
+  document.getElementById('ent-productos-txt').value = e.productos||'';
   document.getElementById('ent-notas').value = e.notas||'';
   document.getElementById('m-entrega-btn').textContent = 'Guardar cambios';
   openModal('m-entrega');
@@ -1463,10 +1523,14 @@ async function guardarEntrega() {
   const sucursal_id = document.getElementById('ent-sucursal').value;
   const fecha = document.getElementById('ent-fecha').value;
   if(!fecha) return alert('Selecciona una fecha.');
+  actualizarResumenEntrega();
+  const desdeCatalogo = document.getElementById('ent-productos').value.trim();
+  const manual = document.getElementById('ent-productos-txt').value.trim();
+  const productos = desdeCatalogo && manual ? desdeCatalogo+', '+manual : desdeCatalogo||manual;
   const body = {
     fecha,
     kg_total: document.getElementById('ent-kg').value||null,
-    productos: document.getElementById('ent-productos').value.trim(),
+    productos,
     notas: document.getElementById('ent-notas').value.trim()
   };
   if(_editEntregaId) {
