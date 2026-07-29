@@ -172,7 +172,7 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 <div class="app" id="app">
   <aside>
     <div class="s-logo">
-      <div class="s-logo-text">Cafe Tueste</div>
+      <img src="/logo.png" alt="Mango Roasters" style="height:38px;max-width:170px;object-fit:contain;display:block;margin-bottom:6px">
       <div class="s-logo-sub">Gestion de produccion</div>
     </div>
     <div class="s-nav">
@@ -908,45 +908,63 @@ function abrirEditarPedido(id){
   openModal('m-pedido');
 }
 
+function buildItemHTML(id, desc, cant, precio) {
+  const opts = D.productos.map(p=>`<option value="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio||0}">${p.nombre}</option>`).join('');
+  const s = `font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block`;
+  const inp = `width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem`;
+  return `
+    <div style="margin-bottom:12px;background:#fafafa;border:1px solid #eee;border-radius:8px;padding:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <label style="${s};flex:1;margin-bottom:0">Producto del catalogo</label>
+        <select onchange="aplicarProductoCatalogo(this,'${id}')" style="flex:1;${inp};background:#fff">
+          <option value="">-- Seleccionar del catalogo --</option>
+          ${opts}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end">
+        <div><label style="${s}">Descripcion</label>
+          <input id="${id}-desc" type="text" value="${desc||''}" placeholder="o escribe manualmente" style="${inp}" oninput="calcTotal()"></div>
+        <div><label style="${s}">Cantidad</label>
+          <input id="${id}-cant" type="number" value="${cant||1}" min="1" step="1" style="${inp}" oninput="calcTotal()"></div>
+        <div><label style="${s}">Precio unit. $</label>
+          <input id="${id}-precio" type="number" value="${precio||0}" step="0.01" style="${inp};font-weight:700" oninput="calcTotal()"></div>
+        <button onclick="document.getElementById('${id}').remove();calcTotal()" style="padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;background:none;cursor:pointer;color:#999;align-self:flex-end">&#x2715;</button>
+      </div>
+    </div>`;
+}
+
+function aplicarProductoCatalogo(sel, itemId) {
+  const opt = sel.options[sel.selectedIndex];
+  if(!opt.value) return;
+  document.getElementById(itemId+'-desc').value = opt.dataset.nombre;
+  document.getElementById(itemId+'-precio').value = opt.dataset.precio||0;
+  calcTotal();
+}
+
 function addItemConDatos(desc,cant,precio){
-  const id='item-'+Date.now()+Math.random();
+  const id='item-'+Date.now()+Math.random().toString(36).slice(2,7);
   const el=document.getElementById('pedido-items');
   const div=document.createElement('div');
-  div.id=id; div.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end';
-  div.innerHTML=`
-    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Descripcion</label>
-      <input type="text" value="${desc||''}" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
-    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Cantidad</label>
-      <input type="number" value="${cant||1}" min="1" step="1" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
-    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Precio unit.</label>
-      <input type="number" value="${precio||0}" step="0.01" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
-    <button onclick="document.getElementById('${id}').remove();calcTotal()" style="padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;background:none;cursor:pointer;color:#999">&#x2715;</button>`;
+  div.id=id;
+  div.innerHTML=buildItemHTML(id,desc,cant,precio);
   el.appendChild(div);
 }
 
 function addItem() {
   const id='item-'+Date.now();
-  pedidoItems.push({id});
   const el=document.getElementById('pedido-items');
   const div=document.createElement('div');
-  div.id=id; div.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end';
-  div.innerHTML=`
-    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Descripcion</label>
-      <input type="text" placeholder="ej. Cafe 250g Colombia" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
-    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Cantidad</label>
-      <input type="number" value="1" min="1" step="1" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
-    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Precio unit.</label>
-      <input type="number" value="0" step="0.01" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
-    <button onclick="document.getElementById('${id}').remove();calcTotal()" style="padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;background:none;cursor:pointer;color:#999">&#x2715;</button>`;
+  div.id=id;
+  div.innerHTML=buildItemHTML(id,'',1,0);
   el.appendChild(div);
 }
 
 function calcTotal() {
   let total=0;
-  document.querySelectorAll('#pedido-items > div').forEach(div=>{
-    const inputs=div.querySelectorAll('input');
-    const cant=parseFloat(inputs[1]?.value||0);
-    const precio=parseFloat(inputs[2]?.value||0);
+  document.querySelectorAll('#pedido-items > div[id]').forEach(div=>{
+    const id=div.id;
+    const cant=parseFloat(document.getElementById(id+'-cant')?.value||0);
+    const precio=parseFloat(document.getElementById(id+'-precio')?.value||0);
     total+=cant*precio;
   });
   document.getElementById('pedido-total').textContent=$m(total);
@@ -986,11 +1004,11 @@ async function guardarPedido() {
   const cliente=document.getElementById('p-cliente').value.trim();
   if(!cliente) return alert('Selecciona un cliente.');
   const items=[];
-  document.querySelectorAll('#pedido-items > div').forEach(div=>{
-    const inputs=div.querySelectorAll('input');
-    const desc=inputs[0]?.value.trim();
-    const cant=parseFloat(inputs[1]?.value||0);
-    const precio=parseFloat(inputs[2]?.value||0);
+  document.querySelectorAll('#pedido-items > div[id]').forEach(div=>{
+    const id=div.id;
+    const desc=(document.getElementById(id+'-desc')?.value||'').trim();
+    const cant=parseFloat(document.getElementById(id+'-cant')?.value||0);
+    const precio=parseFloat(document.getElementById(id+'-precio')?.value||0);
     if(desc) items.push({descripcion:desc,cantidad:cant,unidad:'pza',precio_unitario:precio,subtotal:cant*precio});
   });
   const total=items.reduce((a,i)=>a+i.subtotal,0);
