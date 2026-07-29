@@ -266,9 +266,11 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <div class="sec" id="sec-pedidos">
         <div class="filtros">
           <button class="fbtn on" onclick="fp('todos',this)">Todos</button>
-          <button class="fbtn" onclick="fp('pendiente',this)">Pendientes</button>
+          <button class="fbtn" onclick="fp('pendiente',this)">Pendiente</button>
+          <button class="fbtn" onclick="fp('empaquetar',this)">Por empaquetar</button>
+          <button class="fbtn" onclick="fp('sucursal',this)">Recoge en sucursal</button>
           <button class="fbtn" onclick="fp('en-camino',this)">En camino</button>
-          <button class="fbtn" onclick="fp('entregado',this)">Entregados</button>
+          <button class="fbtn" onclick="fp('entregado',this)">Entregado</button>
         </div>
         <div class="lista" id="lista-pedidos"></div>
       </div>
@@ -1087,8 +1089,8 @@ async function guardarPedido() {
 }
 
 function renderPedidos() {
-  const bMap={pendiente:'b-yellow','en-camino':'b-gray',entregado:'b-green'};
-  const lMap={pendiente:'Pendiente','en-camino':'En camino',entregado:'Entregado'};
+  const bMap={pendiente:'b-yellow',empaquetar:'b-dark',sucursal:'b-gray','en-camino':'b-gray',entregado:'b-green'};
+  const lMap={pendiente:'Pendiente',empaquetar:'Por empaquetar',sucursal:'Recoge en sucursal','en-camino':'En camino',entregado:'Entregado'};
   let lista=filtPedidos==='todos'?[...D.pedidos]:D.pedidos.filter(p=>p.estado===filtPedidos);
   const el=document.getElementById('lista-pedidos');
   if(!lista.length){el.innerHTML='<div class="empty">Sin pedidos registrados.</div>';return;}
@@ -1116,9 +1118,14 @@ function renderPedidos() {
       </div>
       ${items.length?`<div style="margin-top:8px;font-size:.78rem;color:#777">${items.map(i=>`${i.descripcion} x${i.cantidad}`).join(' · ')}</div>`:''}
       <div class="row-actions">
-        ${p.estado==='pendiente'?`<button class="btn btn-sm" onclick="avanzarPedido(${p.id},'en-camino')">En camino</button>`:''}
-        ${p.estado==='en-camino'?`<button class="btn btn-sm btn-sm-green" onclick="avanzarPedido(${p.id},'entregado')">Entregado</button>`:''}
-        ${p.estado==='entregado'?`<button class="btn btn-sm" onclick="avanzarPedido(${p.id},'pendiente')">Reabrir</button>`:''}
+        <select onchange="avanzarPedido(${p.id},this.value);this.value=''" style="padding:5px 8px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:.75rem;font-weight:600;cursor:pointer;background:#fff">
+          <option value="">Cambiar estado...</option>
+          <option value="pendiente"${p.estado==='pendiente'?' disabled':''}>Pendiente</option>
+          <option value="empaquetar"${p.estado==='empaquetar'?' disabled':''}>Por empaquetar</option>
+          <option value="sucursal"${p.estado==='sucursal'?' disabled':''}>Recoge en sucursal</option>
+          <option value="en-camino"${p.estado==='en-camino'?' disabled':''}>En camino</option>
+          <option value="entregado"${p.estado==='entregado'?' disabled':''}>Entregado</option>
+        </select>
         ${p.requiere_factura&&!p.factura_emitida?`<button class="btn btn-sm btn-sm-green" onclick="marcarFacturaEmitida(${p.id})">Factura emitida</button>`:''}
         <button class="btn btn-sm" onclick="abrirEditarPedido(${p.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminar('pedidos',${p.id})">Eliminar</button>
