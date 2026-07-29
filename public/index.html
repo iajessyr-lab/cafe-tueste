@@ -207,6 +207,10 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         Productos
       </button>
+      <button class="s-btn" onclick="go('sucursales')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Sucursales
+      </button>
       <div class="s-section" id="s-admin-section" style="display:none">Admin</div>
       <button class="s-btn" onclick="go('usuarios')" id="s-btn-usuarios" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
@@ -288,6 +292,12 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <!-- PRODUCTOS -->
       <div class="sec" id="sec-productos">
         <div class="lista" id="lista-productos"></div>
+      </div>
+
+      <!-- SUCURSALES -->
+      <div class="sec" id="sec-sucursales">
+        <div id="sucursales-tabs" style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap"></div>
+        <div id="sucursales-content"></div>
       </div>
 
       <!-- USUARIOS -->
@@ -467,6 +477,25 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
 </div></div>
 
+<div class="overlay" id="m-entrega"><div class="modal">
+  <div class="modal-head"><h3 id="m-entrega-titulo">Nueva entrega</h3><button class="modal-close" onclick="closeModal('m-entrega')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="fl"><label>Sucursal</label>
+      <select id="ent-sucursal"></select>
+    </div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Fecha de entrega</label><input id="ent-fecha" type="date"></div>
+      <div class="fl"><label>Kg totales</label><input id="ent-kg" type="number" step="0.1" placeholder="0.0"></div>
+    </div>
+    <div class="fl"><label>Productos / detalle</label><input id="ent-productos" type="text" placeholder="ej. 10x Bolsa 1kg Castelan Medio Alto"></div>
+    <div class="fl"><label>Notas</label><input id="ent-notas" type="text" placeholder="Instrucciones especiales..."></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-entrega')">Cancelar</button>
+    <button class="btn btn-dark" id="m-entrega-btn" onclick="guardarEntrega()">Guardar</button>
+  </div>
+</div></div>
+
 <script>
 // ─── ESTADO ────────────────────────────────────────────────────────────────────
 var token = localStorage.getItem('ct_token');
@@ -551,7 +580,7 @@ function logout() {
 }
 
 // ─── NAVEGACION ────────────────────────────────────────────────────────────────
-const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe Verde',pedidos:'Pedidos',cobros:'Cobros',clientes:'Clientes',productos:'Productos',usuarios:'Usuarios'};
+const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe Verde',pedidos:'Pedidos',cobros:'Cobros',clientes:'Clientes',productos:'Productos',sucursales:'Sucursales',usuarios:'Usuarios'};
 const ACTIONS = {
   tueste: ()=>`<button class="btn btn-outline" onclick="openModal('m-import')">Importar Cropster</button><button class="btn btn-dark" onclick="abrirLote()">+ Nuevo lote</button>`,
   inventario: ()=>`<button class="btn btn-dark" onclick="abrirVerde()">+ Agregar cafe verde</button>`,
@@ -559,6 +588,7 @@ const ACTIONS = {
   cobros: ()=>`<button class="btn btn-dark" onclick="openModal('m-cobro');document.getElementById('c-fecha').value=hoy()">+ Registrar cobro</button>`,
   clientes: ()=>`<button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button>`,
   productos: ()=>`<button class="btn btn-dark" onclick="abrirProducto()">+ Nuevo producto</button>`,
+  sucursales: ()=>`<button class="btn btn-dark" onclick="openModal('m-entrega')">+ Nueva entrega</button>`,
   usuarios: ()=>`<button class="btn btn-dark" onclick="openModal('m-usuario')">+ Crear usuario</button>`,
 };
 
@@ -566,7 +596,8 @@ function go(s) {
   document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.s-btn').forEach(e=>e.classList.remove('on'));
   document.getElementById('sec-'+s).classList.add('on');
-  document.querySelectorAll('.s-btn')[['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','usuarios'].indexOf(s)].classList.add('on');
+  document.querySelectorAll('.s-btn')[['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','sucursales','usuarios'].indexOf(s)].classList.add('on');
+  if(s==='sucursales') renderSucursales();
   document.getElementById('topbar-title').textContent = TITLES[s]||s;
   document.getElementById('topbar-actions').innerHTML = ACTIONS[s]?ACTIONS[s]():'';
   if (s==='dashboard') renderDashboard();
@@ -1253,6 +1284,137 @@ async function eliminar(tabla,id){
   D[key]=D[key].filter(x=>x.id!==id);
   renderAll();
 }
+
+// ─── SUCURSALES ────────────────────────────────────────────────────────────────
+let D_sucursales = [];
+let D_entregas = {};
+let _sucursalActiva = null;
+let _editEntregaId = null;
+
+async function renderSucursales() {
+  D_sucursales = await api('GET', '/api/sucursales');
+  // poblar select del modal
+  const sel = document.getElementById('ent-sucursal');
+  sel.innerHTML = D_sucursales.map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
+  // tabs
+  const tabs = document.getElementById('sucursales-tabs');
+  tabs.innerHTML = D_sucursales.map((s,i)=>`
+    <button class="fbtn${i===0?' on':''}" onclick="activarSucursal(${s.id},this)">${s.nombre}</button>`).join('');
+  if (D_sucursales.length) activarSucursal(D_sucursales[0].id, tabs.querySelector('.fbtn'));
+}
+
+async function activarSucursal(id, btn) {
+  _sucursalActiva = id;
+  document.querySelectorAll('#sucursales-tabs .fbtn').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  const entregas = await api('GET', `/api/sucursales/${id}/entregas`);
+  D_entregas[id] = entregas;
+  renderCalendario(id, entregas);
+}
+
+function renderCalendario(sucursalId, entregas) {
+  const el = document.getElementById('sucursales-content');
+  const suc = D_sucursales.find(s=>s.id===sucursalId);
+  const hoy = new Date(); hoy.setHours(12,0,0,0);
+  const proximas = entregas.filter(e=>new Date(e.fecha+'T12:00:00') >= hoy).slice(0,12);
+  const pasadas  = entregas.filter(e=>new Date(e.fecha+'T12:00:00') <  hoy).reverse().slice(0,6);
+  const estadoBadge = {programada:'b-yellow',entregada:'b-green',cancelada:'b-gray'};
+  const estadoLabel = {programada:'Programada',entregada:'Entregada',cancelada:'Cancelada'};
+
+  const cardEntrega = e => `
+    <div class="row" style="margin-bottom:10px">
+      <div class="row-top">
+        <div>
+          <div class="row-title">${fmt(e.fecha)}</div>
+          ${e.productos?`<div style="font-size:.8rem;color:#666;margin-top:2px">${e.productos}</div>`:''}
+        </div>
+        <span class="badge ${estadoBadge[e.estado]||'b-gray'}">${estadoLabel[e.estado]||e.estado}</span>
+      </div>
+      <div class="row-meta">
+        ${e.kg_total?`<span>${e.kg_total} kg</span>`:''}
+        ${e.notas?`<span>${e.notas}</span>`:''}
+      </div>
+      <div class="row-actions">
+        ${e.estado==='programada'?`<button class="btn btn-sm btn-sm-green" onclick="marcarEntregada(${e.id})">Marcar entregada</button>`:''}
+        <button class="btn btn-sm" onclick="abrirEditarEntrega(${e.id})">Editar</button>
+        <button class="btn btn-sm btn-sm-red" onclick="eliminarEntrega(${e.id})">Eliminar</button>
+      </div>
+    </div>`;
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:14px">Proximas entregas</div>
+        ${proximas.length ? proximas.map(cardEntrega).join('') : '<div class="empty">Sin entregas programadas.</div>'}
+      </div>
+      <div>
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:14px">Historial reciente</div>
+        ${pasadas.length ? pasadas.map(cardEntrega).join('') : '<div class="empty" style="font-size:.82rem;color:#bbb">Sin entregas pasadas.</div>'}
+      </div>
+    </div>`;
+}
+
+function abrirEditarEntrega(id) {
+  const todas = Object.values(D_entregas).flat();
+  const e = todas.find(x=>x.id===id);
+  if(!e) return;
+  _editEntregaId = id;
+  document.getElementById('m-entrega-titulo').textContent = 'Editar entrega';
+  document.getElementById('ent-sucursal').value = e.sucursal_id;
+  document.getElementById('ent-fecha').value = e.fecha ? e.fecha.slice(0,10) : '';
+  document.getElementById('ent-kg').value = e.kg_total||'';
+  document.getElementById('ent-productos').value = e.productos||'';
+  document.getElementById('ent-notas').value = e.notas||'';
+  document.getElementById('m-entrega-btn').textContent = 'Guardar cambios';
+  openModal('m-entrega');
+}
+
+async function guardarEntrega() {
+  const sucursal_id = document.getElementById('ent-sucursal').value;
+  const fecha = document.getElementById('ent-fecha').value;
+  if(!fecha) return alert('Selecciona una fecha.');
+  const body = {
+    fecha,
+    kg_total: document.getElementById('ent-kg').value||null,
+    productos: document.getElementById('ent-productos').value.trim(),
+    notas: document.getElementById('ent-notas').value.trim()
+  };
+  if(_editEntregaId) {
+    const n = await api('PUT', `/api/entregas-sucursal/${_editEntregaId}`, {...body, estado: 'programada'});
+    const sid = n.sucursal_id;
+    if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===_editEntregaId); if(i>=0) D_entregas[sid][i]=n; }
+  } else {
+    const n = await api('POST', `/api/sucursales/${sucursal_id}/entregas`, body);
+    if(!D_entregas[sucursal_id]) D_entregas[sucursal_id]=[];
+    D_entregas[sucursal_id].push(n);
+    D_entregas[sucursal_id].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  }
+  _editEntregaId=null;
+  document.getElementById('m-entrega-titulo').textContent='Nueva entrega';
+  document.getElementById('m-entrega-btn').textContent='Guardar';
+  closeModal('m-entrega');
+  if(_sucursalActiva) renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
+}
+
+async function marcarEntregada(id) {
+  const todas = Object.values(D_entregas).flat();
+  const e = todas.find(x=>x.id===id);
+  if(!e) return;
+  const n = await api('PUT', `/api/entregas-sucursal/${id}`, {...e, estado:'entregada'});
+  const sid = n.sucursal_id;
+  if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===id); if(i>=0) D_entregas[sid][i]=n; }
+  renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
+}
+
+async function eliminarEntrega(id) {
+  if(!confirm('Eliminar esta entrega?')) return;
+  await api('DELETE', `/api/entregas-sucursal/${id}`);
+  for(const sid in D_entregas) D_entregas[sid]=D_entregas[sid].filter(x=>x.id!==id);
+  renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
+}
+
+// reset modal entrega al abrir nuevo
+const _origOpenModal = openModal;
 
 // ─── MODALES ───────────────────────────────────────────────────────────────────
 function openModal(id){document.getElementById(id).classList.add('on');}

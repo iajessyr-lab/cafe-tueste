@@ -106,6 +106,29 @@ async function initDB() {
       subtotal NUMERIC(10,2)
     );
 
+    CREATE TABLE IF NOT EXISTS ct_sucursales (
+      id SERIAL PRIMARY KEY,
+      nombre VARCHAR(200) NOT NULL,
+      ciudad VARCHAR(100),
+      direccion TEXT,
+      contacto VARCHAR(200),
+      telefono VARCHAR(50),
+      notas TEXT,
+      activo BOOLEAN DEFAULT TRUE,
+      creado_en TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ct_entregas_sucursal (
+      id SERIAL PRIMARY KEY,
+      sucursal_id INTEGER REFERENCES ct_sucursales(id) ON DELETE CASCADE,
+      fecha DATE NOT NULL,
+      productos TEXT,
+      kg_total NUMERIC(8,2),
+      estado VARCHAR(30) DEFAULT 'programada',
+      notas TEXT,
+      creado_en TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS ct_cobros (
       id SERIAL PRIMARY KEY,
       cliente_id INTEGER REFERENCES ct_clientes(id),
@@ -119,6 +142,12 @@ async function initDB() {
       creado_en TIMESTAMP DEFAULT NOW()
     );
   `);
+
+  // Sucursales default
+  const { rows: sRows } = await pool.query('SELECT COUNT(*) FROM ct_sucursales');
+  if (parseInt(sRows[0].count) === 0) {
+    await pool.query(`INSERT INTO ct_sucursales (nombre, ciudad) VALUES ('Mexicali','Mexicali'),('Ensenada','Ensenada')`);
+  }
 
   // Productos default
   const { rows } = await pool.query('SELECT COUNT(*) FROM ct_productos');
@@ -424,6 +453,57 @@ app.put('/api/cobros/:id', auth, async (req, res) => {
 });
 app.delete('/api/cobros/:id', auth, async (req, res) => {
   await pool.query('DELETE FROM ct_cobros WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// ─── SUCURSALES ───────────────────────────────────────────────────────────────
+app.get('/api/sucursales', auth, async (req, res) => {
+  const r = await pool.query('SELECT * FROM ct_sucursales WHERE activo=TRUE ORDER BY id');
+  res.json(r.rows);
+});
+app.post('/api/sucursales', auth, async (req, res) => {
+  const { nombre, ciudad, direccion, contacto, telefono, notas } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_sucursales (nombre,ciudad,direccion,contacto,telefono,notas) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+    [nombre, ciudad||null, direccion||null, contacto||null, telefono||null, notas||null]
+  );
+  res.json(r.rows[0]);
+});
+app.put('/api/sucursales/:id', auth, async (req, res) => {
+  const { nombre, ciudad, direccion, contacto, telefono, notas } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_sucursales SET nombre=$1,ciudad=$2,direccion=$3,contacto=$4,telefono=$5,notas=$6 WHERE id=$7 RETURNING *',
+    [nombre, ciudad||null, direccion||null, contacto||null, telefono||null, notas||null, req.params.id]
+  );
+  res.json(r.rows[0]);
+});
+
+// ─── ENTREGAS SUCURSAL ────────────────────────────────────────────────────────
+app.get('/api/sucursales/:id/entregas', auth, async (req, res) => {
+  const r = await pool.query(
+    'SELECT * FROM ct_entregas_sucursal WHERE sucursal_id=$1 ORDER BY fecha ASC',
+    [req.params.id]
+  );
+  res.json(r.rows);
+});
+app.post('/api/sucursales/:id/entregas', auth, async (req, res) => {
+  const { fecha, productos, kg_total, notas } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_entregas_sucursal (sucursal_id,fecha,productos,kg_total,notas) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+    [req.params.id, fecha, productos||null, kg_total||null, notas||null]
+  );
+  res.json(r.rows[0]);
+});
+app.put('/api/entregas-sucursal/:id', auth, async (req, res) => {
+  const { fecha, productos, kg_total, estado, notas } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_entregas_sucursal SET fecha=$1,productos=$2,kg_total=$3,estado=$4,notas=$5 WHERE id=$6 RETURNING *',
+    [fecha, productos||null, kg_total||null, estado||'programada', notas||null, req.params.id]
+  );
+  res.json(r.rows[0]);
+});
+app.delete('/api/entregas-sucursal/:id', auth, async (req, res) => {
+  await pool.query('DELETE FROM ct_entregas_sucursal WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });
 
