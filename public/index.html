@@ -839,8 +839,10 @@ async function guardarVerde() {
 
 // ─── PEDIDOS ───────────────────────────────────────────────────────────────────
 let pedidoItems = [];
+let _editPedidoId = null;
 
 function initPedidoForm() {
+  _editPedidoId=null;
   pedidoItems=[];
   ['p-cliente','p-nota'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('p-fecha').value=hoy();
@@ -851,6 +853,44 @@ function initPedidoForm() {
   chip.textContent='Seleccionar cliente';
   chip.classList.remove('has-val');
   document.getElementById('p-cliente-drop').style.display='none';
+  document.querySelector('#m-pedido .modal-head h3').textContent='Nuevo pedido';
+  document.querySelector('#m-pedido .btn-dark').textContent='Crear pedido';
+}
+
+function abrirEditarPedido(id){
+  const p=D.pedidos.find(x=>x.id===id);
+  if(!p) return;
+  initPedidoForm();
+  _editPedidoId=id;
+  document.getElementById('p-cliente').value=p.cliente_nombre||'';
+  const chip=document.getElementById('p-cliente-chip');
+  chip.textContent=p.cliente_nombre||'Seleccionar cliente';
+  if(p.cliente_nombre) chip.classList.add('has-val');
+  document.getElementById('p-fecha').value=p.fecha_pedido?p.fecha_pedido.slice(0,10):'';
+  document.getElementById('p-entrega').value=p.fecha_entrega?p.fecha_entrega.slice(0,10):'';
+  document.getElementById('p-nota').value=p.nota||'';
+  document.querySelector('#m-pedido .modal-head h3').textContent='Editar pedido';
+  document.querySelector('#m-pedido .btn-dark').textContent='Guardar cambios';
+  const items=Array.isArray(p.items)?p.items.filter(Boolean):[];
+  items.forEach(i=>addItemConDatos(i.descripcion,i.cantidad,i.precio_unitario));
+  calcTotal();
+  openModal('m-pedido');
+}
+
+function addItemConDatos(desc,cant,precio){
+  const id='item-'+Date.now()+Math.random();
+  const el=document.getElementById('pedido-items');
+  const div=document.createElement('div');
+  div.id=id; div.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end';
+  div.innerHTML=`
+    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Descripcion</label>
+      <input type="text" value="${desc||''}" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
+    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Cantidad</label>
+      <input type="number" value="${cant||1}" min="1" step="1" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
+    <div><label style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block">Precio unit.</label>
+      <input type="number" value="${precio||0}" step="0.01" style="width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem" onchange="calcTotal()"></div>
+    <button onclick="document.getElementById('${id}').remove();calcTotal()" style="padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;background:none;cursor:pointer;color:#999">&#x2715;</button>`;
+  el.appendChild(div);
 }
 
 function addItem() {
@@ -922,13 +962,19 @@ async function guardarPedido() {
     const precio=parseFloat(inputs[2]?.value||0);
     if(desc) items.push({descripcion:desc,cantidad:cant,unidad:'pza',precio_unitario:precio,subtotal:cant*precio});
   });
+  const total=items.reduce((a,i)=>a+i.subtotal,0);
   const body={cliente_nombre:cliente,fecha_pedido:document.getElementById('p-fecha').value||hoy(),
     fecha_entrega:document.getElementById('p-entrega').value||null,
-    nota:document.getElementById('p-nota').value.trim(),items};
-  const n=await api('POST','/api/pedidos',body);
-  D.pedidos.unshift({...n,items});
-  // recargar cobros
-  const cobros=await api('GET','/api/cobros'); D.cobros=cobros;
+    nota:document.getElementById('p-nota').value.trim(),total,items};
+  if(_editPedidoId){
+    const n=await api('PUT','/api/pedidos/'+_editPedidoId,body);
+    const i=D.pedidos.findIndex(x=>x.id===_editPedidoId);
+    if(i>=0) D.pedidos[i]={...D.pedidos[i],...n,items};
+  } else {
+    const n=await api('POST','/api/pedidos',body);
+    D.pedidos.unshift({...n,items});
+    const cobros=await api('GET','/api/cobros'); D.cobros=cobros;
+  }
   closeModal('m-pedido'); renderAll();
 }
 
@@ -956,6 +1002,7 @@ function renderPedidos() {
         ${p.estado==='pendiente'?`<button class="btn btn-sm" onclick="avanzarPedido(${p.id},'en-camino')">En camino</button>`:''}
         ${p.estado==='en-camino'?`<button class="btn btn-sm btn-sm-green" onclick="avanzarPedido(${p.id},'entregado')">Entregado</button>`:''}
         ${p.estado==='entregado'?`<button class="btn btn-sm" onclick="avanzarPedido(${p.id},'pendiente')">Reabrir</button>`:''}
+        <button class="btn btn-sm" onclick="abrirEditarPedido(${p.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminar('pedidos',${p.id})">Eliminar</button>
       </div>
     </div>`;

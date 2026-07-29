@@ -384,6 +384,23 @@ app.put('/api/pedidos/:id/estado', auth, async (req, res) => {
   const r = await pool.query('UPDATE ct_pedidos SET estado=$1 WHERE id=$2 RETURNING *', [req.body.estado, req.params.id]);
   res.json(r.rows[0]);
 });
+app.put('/api/pedidos/:id', auth, async (req, res) => {
+  const { cliente_nombre, fecha_pedido, fecha_entrega, nota, total, items } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_pedidos SET cliente_nombre=$1,fecha_pedido=$2,fecha_entrega=$3,nota=$4,total=$5 WHERE id=$6 RETURNING *',
+    [cliente_nombre, fecha_pedido, fecha_entrega||null, nota, total||0, req.params.id]
+  );
+  if (items) {
+    await pool.query('DELETE FROM ct_pedido_items WHERE pedido_id=$1', [req.params.id]);
+    for (const it of items) {
+      await pool.query(
+        'INSERT INTO ct_pedido_items (pedido_id,descripcion,cantidad,unidad,precio_unitario,subtotal) VALUES ($1,$2,$3,$4,$5,$6)',
+        [req.params.id, it.descripcion, it.cantidad, it.unidad||'pza', it.precio_unitario, it.subtotal]
+      );
+    }
+  }
+  res.json(r.rows[0]);
+});
 app.delete('/api/pedidos/:id', auth, async (req, res) => {
   await pool.query('DELETE FROM ct_pedidos WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
