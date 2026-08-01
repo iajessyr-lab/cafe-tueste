@@ -207,6 +207,10 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         Productos
       </button>
+      <button class="s-btn" onclick="go('pagos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Pagos
+      </button>
       <button class="s-btn" onclick="go('sucursales')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         Sucursales
@@ -294,6 +298,18 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <!-- PRODUCTOS -->
       <div class="sec" id="sec-productos">
         <div class="lista" id="lista-productos"></div>
+      </div>
+
+      <!-- PAGOS -->
+      <div class="sec" id="sec-pagos">
+        <div class="stats" id="pagos-stats"></div>
+        <div class="filtros" style="margin-bottom:16px">
+          <button class="fbtn on" onclick="fpagos('todos',this)">Todos</button>
+          <button class="fbtn" onclick="fpagos('pendiente',this)">Pendientes</button>
+          <button class="fbtn" onclick="fpagos('parcial',this)">Parciales</button>
+          <button class="fbtn" onclick="fpagos('pagado',this)">Pagados</button>
+        </div>
+        <div class="lista" id="lista-pagos"></div>
       </div>
 
       <!-- SUCURSALES -->
@@ -540,6 +556,31 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
 </div></div>
 
+<div class="overlay" id="m-pago"><div class="modal">
+  <div class="modal-head"><h3 id="m-pago-titulo">Nuevo pago</h3><button class="modal-close" onclick="closeModal('m-pago')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Proveedor</label><input id="pg-proveedor" type="text" placeholder="ej. Rancho El Refugio"></div>
+      <div class="fl"><label>Semana</label><input id="pg-semana" type="text" placeholder="ej. Sem 31 · Jul 2026"></div>
+    </div>
+    <div class="fl"><label>Concepto</label><input id="pg-concepto" type="text" placeholder="ej. Cafe Castelan Lavado 120kg"></div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Total a pagar ($)</label><input id="pg-monto" type="number" step="0.01" placeholder="0.00" oninput="calcPagoPendiente()"></div>
+      <div class="fl"><label>Ya pagado ($)</label><input id="pg-pagado" type="number" step="0.01" placeholder="0.00" oninput="calcPagoPendiente()"></div>
+      <div class="fl"><label>Fecha</label><input id="pg-fecha" type="date"></div>
+      <div class="fl"><label>Metodo</label>
+        <select id="pg-metodo"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option><option>Pendiente</option></select>
+      </div>
+    </div>
+    <div id="pg-pendiente-info" style="margin-top:8px;font-size:.83rem;color:#c0392b;font-weight:700"></div>
+    <div class="fl"><label>Notas</label><input id="pg-notas" type="text" placeholder="Observaciones..."></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-pago')">Cancelar</button>
+    <button class="btn btn-dark" id="m-pago-btn" onclick="guardarPago()">Guardar</button>
+  </div>
+</div></div>
+
 <script>
 // ─── ESTADO ────────────────────────────────────────────────────────────────────
 var token = localStorage.getItem('ct_token');
@@ -624,7 +665,7 @@ function logout() {
 }
 
 // ─── NAVEGACION ────────────────────────────────────────────────────────────────
-const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe Verde',pedidos:'Pedidos',cobros:'Cobros',clientes:'Clientes',productos:'Productos',sucursales:'Sucursales',usuarios:'Usuarios'};
+const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe Verde',pedidos:'Pedidos',cobros:'Cobros',clientes:'Clientes',productos:'Productos',pagos:'Pagos a Proveedores',sucursales:'Sucursales',usuarios:'Usuarios'};
 const ACTIONS = {
   tueste: ()=>`<button class="btn btn-outline" onclick="openModal('m-import')">Importar Cropster</button><button class="btn btn-dark" onclick="abrirLote()">+ Nuevo lote</button>`,
   inventario: ()=>`<button class="btn btn-dark" onclick="abrirVerde()">+ Agregar cafe verde</button>`,
@@ -632,6 +673,7 @@ const ACTIONS = {
   cobros: ()=>`<button class="btn btn-dark" onclick="abrirModalCobro()">+ Registrar cobro</button>`,
   clientes: ()=>`<button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button>`,
   productos: ()=>`<button class="btn btn-dark" onclick="abrirProducto()">+ Nuevo producto</button>`,
+  pagos: ()=>`<button class="btn btn-dark" onclick="abrirPago()">+ Nuevo pago</button>`,
   sucursales: ()=>`<button class="btn btn-dark" onclick="resetEntregaForm();poblarProductosEntrega();openModal('m-entrega')">+ Nueva entrega</button>`,
   usuarios: ()=>`<button class="btn btn-dark" onclick="openModal('m-usuario')">+ Crear usuario</button>`,
 };
@@ -640,8 +682,9 @@ function go(s) {
   document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.s-btn').forEach(e=>e.classList.remove('on'));
   document.getElementById('sec-'+s).classList.add('on');
-  document.querySelectorAll('.s-btn')[['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','sucursales','usuarios'].indexOf(s)].classList.add('on');
+  document.querySelectorAll('.s-btn')[['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','pagos','sucursales','usuarios'].indexOf(s)].classList.add('on');
   if(s==='sucursales') renderSucursales();
+  if(s==='pagos') renderPagos();
   document.getElementById('topbar-title').textContent = TITLES[s]||s;
   document.getElementById('topbar-actions').innerHTML = ACTIONS[s]?ACTIONS[s]():'';
   if (s==='dashboard') renderDashboard();
@@ -1432,6 +1475,125 @@ async function eliminar(tabla,id){
   await api('DELETE',url+id);
   D[key]=D[key].filter(x=>x.id!==id);
   renderAll();
+}
+
+// ─── PAGOS ─────────────────────────────────────────────────────────────────────
+let D_pagos = [];
+let _editPagoId = null;
+let filtPagos = 'todos';
+
+async function renderPagos() {
+  D_pagos = await api('GET', '/api/pagos');
+  const lista = filtPagos==='todos' ? D_pagos : D_pagos.filter(p=>p.estado===filtPagos);
+  const tMonto = D_pagos.reduce((a,p)=>a+parseFloat(p.monto||0),0);
+  const tPagado = D_pagos.reduce((a,p)=>a+parseFloat(p.pagado||0),0);
+  const tPend = D_pagos.filter(p=>p.estado==='pendiente').length;
+
+  document.getElementById('pagos-stats').innerHTML=`
+    <div class="stat-card"><div class="val red">$${(tMonto-tPagado).toFixed(2)}</div><div class="lbl">Por pagar</div></div>
+    <div class="stat-card"><div class="val green">$${tPagado.toFixed(2)}</div><div class="lbl">Pagado</div></div>
+    <div class="stat-card"><div class="val">${tPend}</div><div class="lbl">Pagos pendientes</div></div>
+    <div class="stat-card"><div class="val">$${tMonto.toFixed(2)}</div><div class="lbl">Total comprometido</div></div>`;
+
+  const el = document.getElementById('lista-pagos');
+  if(!lista.length){el.innerHTML='<div class="empty">Sin pagos registrados.</div>';return;}
+  const bMap={pendiente:'b-yellow',parcial:'b-gray',pagado:'b-green'};
+  const lMap={pendiente:'Pendiente',parcial:'Parcial',pagado:'Pagado'};
+  el.innerHTML = lista.map(p=>{
+    const pendiente = parseFloat(p.monto||0)-parseFloat(p.pagado||0);
+    return `<div class="row">
+      <div class="row-top">
+        <div>
+          <div class="row-title">${p.proveedor}</div>
+          ${p.semana?`<div style="font-size:.75rem;color:#aaa;margin-top:1px">${p.semana}</div>`:''}
+        </div>
+        <span class="badge ${bMap[p.estado]||'b-gray'}">${lMap[p.estado]||p.estado}</span>
+      </div>
+      <div class="row-meta">
+        <span>${fmt(p.fecha)}</span>
+        ${p.concepto?`<span>${p.concepto}</span>`:''}
+        <span>Total: $${parseFloat(p.monto).toFixed(2)}</span>
+        <span style="color:#27ae60">Pagado: $${parseFloat(p.pagado).toFixed(2)}</span>
+        ${pendiente>0?`<span style="color:#c0392b;font-weight:700">Debe: $${pendiente.toFixed(2)}</span>`:''}
+        ${p.metodo?`<span>${p.metodo}</span>`:''}
+      </div>
+      ${p.notas?`<div style="font-size:.78rem;color:#999;margin-top:4px">${p.notas}</div>`:''}
+      <div class="row-actions">
+        ${p.estado!=='pagado'?`<button class="btn btn-sm btn-sm-green" onclick="pagarCompleto(${p.id})">Marcar pagado</button>`:''}
+        <button class="btn btn-sm" onclick="abrirPago(${p.id})">Editar</button>
+        <button class="btn btn-sm btn-sm-red" onclick="eliminarPago(${p.id})">Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function fpagos(f,btn){
+  filtPagos=f;
+  document.querySelectorAll('#sec-pagos .fbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); renderPagos();
+}
+
+function calcPagoPendiente(){
+  const m=parseFloat(document.getElementById('pg-monto').value||0);
+  const p=parseFloat(document.getElementById('pg-pagado').value||0);
+  const diff=m-p;
+  const el=document.getElementById('pg-pendiente-info');
+  el.textContent = diff>0 ? `Pendiente por pagar: $${diff.toFixed(2)}` : diff===0&&m>0 ? 'Pagado completo' : '';
+}
+
+function abrirPago(id){
+  _editPagoId=id||null;
+  const p=id?D_pagos.find(x=>x.id===id):null;
+  document.getElementById('m-pago-titulo').textContent=p?'Editar pago':'Nuevo pago';
+  document.getElementById('pg-proveedor').value=p?.proveedor||'';
+  document.getElementById('pg-semana').value=p?.semana||semanaActual();
+  document.getElementById('pg-concepto').value=p?.concepto||'';
+  document.getElementById('pg-monto').value=p?.monto||'';
+  document.getElementById('pg-pagado').value=p?.pagado||'';
+  document.getElementById('pg-fecha').value=p?.fecha?p.fecha.slice(0,10):hoy();
+  document.getElementById('pg-notas').value=p?.notas||'';
+  document.getElementById('m-pago-btn').textContent=p?'Guardar cambios':'Guardar';
+  document.getElementById('pg-pendiente-info').textContent='';
+  openModal('m-pago');
+}
+
+function semanaActual(){
+  const d=new Date();
+  const sem=Math.ceil(d.getDate()/7);
+  return `Sem ${sem} · ${d.toLocaleDateString('es-MX',{month:'short',year:'numeric'})}`;
+}
+
+async function guardarPago(){
+  const proveedor=document.getElementById('pg-proveedor').value.trim();
+  if(!proveedor) return alert('Ingresa el proveedor.');
+  const body={
+    proveedor,
+    semana:document.getElementById('pg-semana').value.trim(),
+    concepto:document.getElementById('pg-concepto').value.trim(),
+    monto:document.getElementById('pg-monto').value||0,
+    pagado:document.getElementById('pg-pagado').value||0,
+    fecha:document.getElementById('pg-fecha').value||hoy(),
+    metodo:document.getElementById('pg-metodo').value,
+    notas:document.getElementById('pg-notas').value.trim()
+  };
+  if(_editPagoId){
+    await api('PUT','/api/pagos/'+_editPagoId,body);
+  } else {
+    await api('POST','/api/pagos',body);
+  }
+  closeModal('m-pago'); renderPagos();
+}
+
+async function pagarCompleto(id){
+  const p=D_pagos.find(x=>x.id===id); if(!p) return;
+  await api('PUT','/api/pagos/'+id,{...p,pagado:p.monto,fecha:p.fecha.slice(0,10)});
+  renderPagos();
+}
+
+async function eliminarPago(id){
+  if(!confirm('Eliminar este pago?')) return;
+  await api('DELETE','/api/pagos/'+id);
+  renderPagos();
 }
 
 // ─── SUCURSALES ────────────────────────────────────────────────────────────────

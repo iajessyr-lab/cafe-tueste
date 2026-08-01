@@ -106,6 +106,20 @@ async function initDB() {
       subtotal NUMERIC(10,2)
     );
 
+    CREATE TABLE IF NOT EXISTS ct_pagos (
+      id SERIAL PRIMARY KEY,
+      proveedor VARCHAR(200) NOT NULL,
+      concepto TEXT,
+      monto NUMERIC(10,2) DEFAULT 0,
+      pagado NUMERIC(10,2) DEFAULT 0,
+      fecha DATE NOT NULL,
+      semana VARCHAR(20),
+      metodo VARCHAR(50),
+      estado VARCHAR(30) DEFAULT 'pendiente',
+      notas TEXT,
+      creado_en TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS ct_sucursales (
       id SERIAL PRIMARY KEY,
       nombre VARCHAR(200) NOT NULL,
@@ -475,6 +489,34 @@ app.put('/api/cobros/:id', auth, async (req, res) => {
 });
 app.delete('/api/cobros/:id', auth, async (req, res) => {
   await pool.query('DELETE FROM ct_cobros WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// ─── PAGOS ────────────────────────────────────────────────────────────────────
+app.get('/api/pagos', auth, async (req, res) => {
+  const r = await pool.query('SELECT * FROM ct_pagos ORDER BY fecha DESC');
+  res.json(r.rows);
+});
+app.post('/api/pagos', auth, async (req, res) => {
+  const { proveedor, concepto, monto, pagado, fecha, semana, metodo, notas } = req.body;
+  const estado = parseFloat(pagado||0) >= parseFloat(monto||0) && parseFloat(monto||0)>0 ? 'pagado' : parseFloat(pagado||0)>0 ? 'parcial' : 'pendiente';
+  const r = await pool.query(
+    'INSERT INTO ct_pagos (proveedor,concepto,monto,pagado,fecha,semana,metodo,estado,notas) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+    [proveedor, concepto||null, monto||0, pagado||0, fecha, semana||null, metodo||null, estado, notas||null]
+  );
+  res.json(r.rows[0]);
+});
+app.put('/api/pagos/:id', auth, async (req, res) => {
+  const { proveedor, concepto, monto, pagado, fecha, semana, metodo, notas } = req.body;
+  const estado = parseFloat(pagado||0) >= parseFloat(monto||0) && parseFloat(monto||0)>0 ? 'pagado' : parseFloat(pagado||0)>0 ? 'parcial' : 'pendiente';
+  const r = await pool.query(
+    'UPDATE ct_pagos SET proveedor=$1,concepto=$2,monto=$3,pagado=$4,fecha=$5,semana=$6,metodo=$7,estado=$8,notas=$9 WHERE id=$10 RETURNING *',
+    [proveedor, concepto||null, monto||0, pagado||0, fecha, semana||null, metodo||null, estado, notas||null, req.params.id]
+  );
+  res.json(r.rows[0]);
+});
+app.delete('/api/pagos/:id', auth, async (req, res) => {
+  await pool.query('DELETE FROM ct_pagos WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });
 
