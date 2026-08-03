@@ -297,6 +297,32 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 
       <!-- PRODUCTOS -->
       <div class="sec" id="sec-productos">
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="position:relative;flex:1;min-width:180px">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#aaa;font-size:1rem">🔍</span>
+            <input id="prod-buscar" type="text" placeholder="Buscar por nombre, origen..." oninput="renderProductos()" style="padding:8px 10px 8px 32px;width:100%;border:1.5px solid #e5e5e5;border-radius:8px;font-size:.84rem">
+          </div>
+          <select id="prod-filt-tueste" onchange="renderProductos()" style="padding:8px 12px;border:1.5px solid #e5e5e5;border-radius:8px;font-size:.84rem;background:#fff">
+            <option value="">Todos los tuestos</option>
+            <option value="medio">Medio</option>
+            <option value="medio alto">Medio Alto</option>
+            <option value="alto">Alto</option>
+          </select>
+          <select id="prod-filt-presentacion" onchange="renderProductos()" style="padding:8px 12px;border:1.5px solid #e5e5e5;border-radius:8px;font-size:.84rem;background:#fff">
+            <option value="">Todas las presentaciones</option>
+            <option value="bolsa 250g">Bolsa 250g</option>
+            <option value="bolsa 500g">Bolsa 500g</option>
+            <option value="bolsa 1kg">Bolsa 1kg</option>
+            <option value="bolsa 3kg">Bolsa 3kg</option>
+            <option value="granel">Granel</option>
+          </select>
+          <select id="prod-filt-venta" onchange="renderProductos()" style="padding:8px 12px;border:1.5px solid #e5e5e5;border-radius:8px;font-size:.84rem;background:#fff">
+            <option value="">Tipo de venta</option>
+            <option value="punto_venta">Punto de Venta</option>
+            <option value="mayoreo">Mayoreo</option>
+            <option value="ambos">PV + Mayoreo</option>
+          </select>
+        </div>
         <div class="lista" id="lista-productos"></div>
       </div>
 
@@ -506,13 +532,23 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   <div class="modal-head"><h3 id="m-producto-titulo">Nuevo producto</h3><button class="modal-close" onclick="closeModal('m-producto')">&#x2715;</button></div>
   <div class="modal-body">
     <div class="fl"><label>Nombre del producto</label><input id="pr-nombre" type="text" placeholder="ej. Bolsa 3 kg Castelan Lavado"></div>
-    <div class="fg" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Categoría</label><select id="pr-categoria" onchange="toggleCamposCafe()">
+        <option value="cafe">Café</option>
+        <option value="leche">Leche / Lácteos</option>
+        <option value="empaque">Empaque / Bolsas</option>
+        <option value="insumo">Insumo general</option>
+        <option value="otro">Otro</option>
+      </select></div>
       <div class="fl"><label>Tipo de venta</label><select id="pr-tipo-venta">
         <option value="">Sin especificar</option>
         <option value="punto_venta">Punto de Venta</option>
         <option value="mayoreo">Mayoreo</option>
         <option value="ambos">Ambos</option>
       </select></div>
+    </div>
+    <div id="campos-cafe">
+    <div class="fg" style="grid-template-columns:1fr 1fr">
       <div class="fl"><label>Presentacion</label><select id="pr-presentacion">
         <option value="">Sin especificar</option>
         <option value="bolsa 250g">Bolsa 250g</option>
@@ -532,12 +568,13 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <div class="fl"><label>Origen</label><input id="pr-origen" type="text" placeholder="ej. Oaxaca, Chiapas"></div>
       <div class="fl"><label>Varietal</label><input id="pr-varietal" type="text" placeholder="ej. Typica, Bourbon"></div>
     </div>
-    <div class="fg" style="grid-template-columns:1fr 1fr 1fr">
-      <div class="fl"><label>Altura (msnm)</label><input id="pr-altura" type="text" placeholder="ej. 1800 msnm"></div>
+    <div class="fl"><label>Altura (msnm)</label><input id="pr-altura" type="text" placeholder="ej. 1800 msnm"></div>
+    </div><!-- /campos-cafe -->
+    <div class="fg" style="grid-template-columns:1fr 1fr">
       <div class="fl"><label>Costo de producción ($)</label><input id="pr-costo" type="number" step="0.01" placeholder="0.00"></div>
       <div class="fl"><label>Precio de venta ($)</label><input id="pr-precio" type="number" step="0.01" placeholder="0.00"></div>
     </div>
-    <div class="fl"><label>Comentarios</label><textarea id="pr-comentarios" rows="3" placeholder="Notas de cata, proceso, características..."></textarea></div>
+    <div class="fl"><label>Comentarios</label><textarea id="pr-comentarios" rows="3" placeholder="Descripción, notas, características..."></textarea></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-producto')">Cancelar</button>
@@ -1405,15 +1442,35 @@ async function guardarCliente(){
 // ─── PRODUCTOS ─────────────────────────────────────────────────────────────────
 let _editProductoId = null;
 
+function toggleCamposCafe(){
+  const cat=document.getElementById('pr-categoria').value;
+  const show=cat===''||cat==='cafe';
+  document.getElementById('campos-cafe').style.display=show?'':'none';
+}
+
 function renderProductos(){
   const el=document.getElementById('lista-productos');
   if(!D.productos.length){el.innerHTML='<div class="empty">Sin productos registrados.</div>';return;}
+  const q=(document.getElementById('prod-buscar')?.value||'').toLowerCase();
+  const ft=document.getElementById('prod-filt-tueste')?.value||'';
+  const fp=document.getElementById('prod-filt-presentacion')?.value||'';
+  const fv=document.getElementById('prod-filt-venta')?.value||'';
+  const lista=D.productos.filter(p=>{
+    if(q && !((p.nombre||'').toLowerCase().includes(q)||(p.origen||'').toLowerCase().includes(q)||(p.varietal||'').toLowerCase().includes(q))) return false;
+    if(ft && p.tipo_tueste!==ft) return false;
+    if(fp && p.presentacion!==fp) return false;
+    if(fv && p.tipo_venta!==fv) return false;
+    return true;
+  });
+  if(!lista.length){el.innerHTML='<div class="empty">Sin resultados.</div>';return;}
+  const catLabel={cafe:'Café',leche:'Leche / Lácteos',empaque:'Empaque',insumo:'Insumo',otro:'Otro'};
   const tueste_label={'medio':'Medio','medio alto':'Medio Alto','alto':'Alto'};
-  el.innerHTML=D.productos.map(p=>`
+  el.innerHTML=lista.map(p=>`
     <div class="row">
       <div class="row-top">
         <div class="row-title">${p.nombre}</div>
         <div style="display:flex;gap:6px">
+          ${p.categoria&&p.categoria!=='cafe'?`<span class="badge" style="background:#f3e5f5;color:#6a1b9a">${catLabel[p.categoria]||p.categoria}</span>`:''}
           ${p.tipo_venta==='punto_venta'?`<span class="badge" style="background:#e8f4fd;color:#2980b9">Punto de Venta</span>`:p.tipo_venta==='mayoreo'?`<span class="badge" style="background:#fef9e7;color:#d68910">Mayoreo</span>`:p.tipo_venta==='ambos'?`<span class="badge" style="background:#eafaf1;color:#1e8449">PV + Mayoreo</span>`:''}
           ${p.presentacion?`<span class="badge b-gray">${p.presentacion}</span>`:''}
           ${p.tipo_tueste?`<span class="badge b-dark">${tueste_label[p.tipo_tueste]||p.tipo_tueste}</span>`:''}
@@ -1439,6 +1496,7 @@ function abrirProducto(id){
   const p = id ? D.productos.find(x=>x.id===id) : null;
   document.getElementById('m-producto-titulo').textContent = p ? 'Editar producto' : 'Nuevo producto';
   document.getElementById('pr-nombre').value = p?.nombre||'';
+  document.getElementById('pr-categoria').value = p?.categoria||'cafe';
   document.getElementById('pr-tipo-venta').value = p?.tipo_venta||'';
   document.getElementById('pr-presentacion').value = p?.presentacion||'';
   document.getElementById('pr-tueste').value = p?.tipo_tueste||'';
@@ -1449,13 +1507,16 @@ function abrirProducto(id){
   document.getElementById('pr-precio').value = p?.precio||'';
   document.getElementById('pr-comentarios').value = p?.comentarios||'';
   document.getElementById('m-producto-btn').textContent = p ? 'Guardar cambios' : 'Guardar';
+  toggleCamposCafe();
   openModal('m-producto');
 }
 
 async function guardarProducto(){
   const nombre=document.getElementById('pr-nombre').value.trim();
   if(!nombre) return alert('Ingresa el nombre del producto.');
-  const body={nombre,presentacion:document.getElementById('pr-presentacion').value,
+  const body={nombre,
+    categoria:document.getElementById('pr-categoria').value||'cafe',
+    presentacion:document.getElementById('pr-presentacion').value,
     tipo_venta:document.getElementById('pr-tipo-venta').value,
     tipo_tueste:document.getElementById('pr-tueste').value,
     origen:document.getElementById('pr-origen').value.trim(),
