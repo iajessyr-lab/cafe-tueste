@@ -506,7 +506,13 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   <div class="modal-head"><h3 id="m-producto-titulo">Nuevo producto</h3><button class="modal-close" onclick="closeModal('m-producto')">&#x2715;</button></div>
   <div class="modal-body">
     <div class="fl"><label>Nombre del producto</label><input id="pr-nombre" type="text" placeholder="ej. Bolsa 3 kg Castelan Lavado"></div>
-    <div class="fg" style="grid-template-columns:1fr 1fr">
+    <div class="fg" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="fl"><label>Tipo de venta</label><select id="pr-tipo-venta">
+        <option value="">Sin especificar</option>
+        <option value="punto_venta">Punto de Venta</option>
+        <option value="mayoreo">Mayoreo</option>
+        <option value="ambos">Ambos</option>
+      </select></div>
       <div class="fl"><label>Presentacion</label><select id="pr-presentacion">
         <option value="">Sin especificar</option>
         <option value="bolsa 250g">Bolsa 250g</option>
@@ -1403,6 +1409,7 @@ function renderProductos(){
       <div class="row-top">
         <div class="row-title">${p.nombre}</div>
         <div style="display:flex;gap:6px">
+          ${p.tipo_venta==='punto_venta'?`<span class="badge" style="background:#e8f4fd;color:#2980b9">Punto de Venta</span>`:p.tipo_venta==='mayoreo'?`<span class="badge" style="background:#fef9e7;color:#d68910">Mayoreo</span>`:p.tipo_venta==='ambos'?`<span class="badge" style="background:#eafaf1;color:#1e8449">PV + Mayoreo</span>`:''}
           ${p.presentacion?`<span class="badge b-gray">${p.presentacion}</span>`:''}
           ${p.tipo_tueste?`<span class="badge b-dark">${tueste_label[p.tipo_tueste]||p.tipo_tueste}</span>`:''}
         </div>
@@ -1427,6 +1434,7 @@ function abrirProducto(id){
   const p = id ? D.productos.find(x=>x.id===id) : null;
   document.getElementById('m-producto-titulo').textContent = p ? 'Editar producto' : 'Nuevo producto';
   document.getElementById('pr-nombre').value = p?.nombre||'';
+  document.getElementById('pr-tipo-venta').value = p?.tipo_venta||'';
   document.getElementById('pr-presentacion').value = p?.presentacion||'';
   document.getElementById('pr-tueste').value = p?.tipo_tueste||'';
   document.getElementById('pr-origen').value = p?.origen||'';
@@ -1443,6 +1451,7 @@ async function guardarProducto(){
   const nombre=document.getElementById('pr-nombre').value.trim();
   if(!nombre) return alert('Ingresa el nombre del producto.');
   const body={nombre,presentacion:document.getElementById('pr-presentacion').value,
+    tipo_venta:document.getElementById('pr-tipo-venta').value,
     tipo_tueste:document.getElementById('pr-tueste').value,
     origen:document.getElementById('pr-origen').value.trim(),
     varietal:document.getElementById('pr-varietal').value.trim(),
