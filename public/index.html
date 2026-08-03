@@ -522,7 +522,15 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
         <option value="alto">Alto</option>
       </select></div>
     </div>
-    <div class="fl"><label>Precio ($)</label><input id="pr-precio" type="number" step="0.01" placeholder="0.00"></div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Origen</label><input id="pr-origen" type="text" placeholder="ej. Oaxaca, Chiapas"></div>
+      <div class="fl"><label>Varietal</label><input id="pr-varietal" type="text" placeholder="ej. Typica, Bourbon"></div>
+    </div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Altura (msnm)</label><input id="pr-altura" type="text" placeholder="ej. 1800 msnm"></div>
+      <div class="fl"><label>Precio ($)</label><input id="pr-precio" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="fl"><label>Comentarios</label><textarea id="pr-comentarios" rows="3" placeholder="Notas de cata, proceso, características..."></textarea></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-producto')">Cancelar</button>
@@ -1390,8 +1398,12 @@ function renderProductos(){
         </div>
       </div>
       <div class="row-meta">
+        ${p.origen?`<span>📍 ${p.origen}</span>`:''}
+        ${p.varietal?`<span>🌱 ${p.varietal}</span>`:''}
+        ${p.altura?`<span>⛰ ${p.altura}</span>`:''}
         ${p.precio?`<span>$${parseFloat(p.precio).toFixed(2)}</span>`:''}
       </div>
+      ${p.comentarios?`<div style="font-size:.78rem;color:#999;margin-top:6px">${p.comentarios}</div>`:''}
       <div class="row-actions">
         <button class="btn btn-sm" onclick="abrirProducto(${p.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminarProducto(${p.id})">Eliminar</button>
@@ -1406,7 +1418,11 @@ function abrirProducto(id){
   document.getElementById('pr-nombre').value = p?.nombre||'';
   document.getElementById('pr-presentacion').value = p?.presentacion||'';
   document.getElementById('pr-tueste').value = p?.tipo_tueste||'';
+  document.getElementById('pr-origen').value = p?.origen||'';
+  document.getElementById('pr-varietal').value = p?.varietal||'';
+  document.getElementById('pr-altura').value = p?.altura||'';
   document.getElementById('pr-precio').value = p?.precio||'';
+  document.getElementById('pr-comentarios').value = p?.comentarios||'';
   document.getElementById('m-producto-btn').textContent = p ? 'Guardar cambios' : 'Guardar';
   openModal('m-producto');
 }
@@ -1416,7 +1432,11 @@ async function guardarProducto(){
   if(!nombre) return alert('Ingresa el nombre del producto.');
   const body={nombre,presentacion:document.getElementById('pr-presentacion').value,
     tipo_tueste:document.getElementById('pr-tueste').value,
-    precio:document.getElementById('pr-precio').value||0};
+    origen:document.getElementById('pr-origen').value.trim(),
+    varietal:document.getElementById('pr-varietal').value.trim(),
+    altura:document.getElementById('pr-altura').value.trim(),
+    precio:document.getElementById('pr-precio').value||0,
+    comentarios:document.getElementById('pr-comentarios').value.trim()};
   if(_editProductoId){
     const n=await api('PUT','/api/productos/'+_editProductoId,body);
     const i=D.productos.findIndex(x=>x.id===_editProductoId);
