@@ -383,14 +383,15 @@ app.get('/api/productos', auth, async (req, res) => {
   await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS varietal VARCHAR(100)');
   await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS altura VARCHAR(50)');
   await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS comentarios TEXT');
+  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS costo_produccion NUMERIC(10,2)');
   const r = await pool.query('SELECT * FROM ct_productos WHERE activo=TRUE ORDER BY nombre');
   res.json(r.rows);
 });
 app.put('/api/productos/:id', auth, async (req, res) => {
-  const { nombre, presentacion, peso_g, precio, tipo_tueste, origen, varietal, altura, comentarios } = req.body;
+  const { nombre, presentacion, peso_g, precio, tipo_tueste, origen, varietal, altura, comentarios, costo_produccion } = req.body;
   const r = await pool.query(
-    'UPDATE ct_productos SET nombre=$1,presentacion=$2,peso_g=$3,precio=$4,tipo_tueste=$5,origen=$6,varietal=$7,altura=$8,comentarios=$9 WHERE id=$10 RETURNING *',
-    [nombre, presentacion, peso_g||null, precio||0, tipo_tueste||null, origen||null, varietal||null, altura||null, comentarios||null, req.params.id]
+    'UPDATE ct_productos SET nombre=$1,presentacion=$2,peso_g=$3,precio=$4,tipo_tueste=$5,origen=$6,varietal=$7,altura=$8,comentarios=$9,costo_produccion=$10 WHERE id=$11 RETURNING *',
+    [nombre, presentacion, peso_g||null, precio||0, tipo_tueste||null, origen||null, varietal||null, altura||null, comentarios||null, costo_produccion||null, req.params.id]
   );
   res.json(r.rows[0]);
 });
@@ -399,10 +400,10 @@ app.delete('/api/productos/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 app.post('/api/productos', auth, async (req, res) => {
-  const { nombre, presentacion, peso_g, precio, tipo_tueste, origen, varietal, altura, comentarios } = req.body;
+  const { nombre, presentacion, peso_g, precio, tipo_tueste, origen, varietal, altura, comentarios, costo_produccion } = req.body;
   const r = await pool.query(
-    'INSERT INTO ct_productos (nombre,presentacion,peso_g,precio,tipo_tueste,origen,varietal,altura,comentarios) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
-    [nombre, presentacion||null, peso_g||null, precio||0, tipo_tueste||null, origen||null, varietal||null, altura||null, comentarios||null]
+    'INSERT INTO ct_productos (nombre,presentacion,peso_g,precio,tipo_tueste,origen,varietal,altura,comentarios,costo_produccion) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',
+    [nombre, presentacion||null, peso_g||null, precio||0, tipo_tueste||null, origen||null, varietal||null, altura||null, comentarios||null, costo_produccion||null]
   );
   res.json(r.rows[0]);
 });
