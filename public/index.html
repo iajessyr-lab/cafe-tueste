@@ -583,6 +583,15 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
     </div>
     <div id="pg-pendiente-info" style="margin-top:8px;font-size:.83rem;color:#c0392b;font-weight:700"></div>
     <div class="fl"><label>Notas</label><input id="pg-notas" type="text" placeholder="Observaciones..."></div>
+    <div class="fl">
+      <label>Archivos adjuntos</label>
+      <div id="pg-archivos-lista" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
+      <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:.83rem;color:#555;background:#f5f5f5;border:1px dashed #ccc;padding:6px 12px;border-radius:6px">
+        <span>📎 Adjuntar archivo</span>
+        <input type="file" id="pg-archivo-input" multiple accept=".pdf,.jpg,.jpeg,.png,.xml" style="display:none" onchange="adjuntarArchivosPago()">
+      </label>
+      <div style="font-size:.72rem;color:#aaa;margin-top:4px">PDF, imagen o XML · máx 5 MB por archivo</div>
+    </div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-pago')">Cancelar</button>
@@ -1542,6 +1551,7 @@ async function renderPagos() {
         ${p.metodo?`<span>${p.metodo}</span>`:''}
       </div>
       ${p.notas?`<div style="font-size:.78rem;color:#999;margin-top:4px">${p.notas}</div>`:''}
+      ${p.archivos&&p.archivos.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">${p.archivos.map(a=>`<a href="${a.data}" download="${a.nombre}" style="display:inline-flex;align-items:center;gap:4px;background:#f0f0f0;border-radius:4px;padding:3px 8px;font-size:.75rem;color:#333;text-decoration:none">📄 ${a.nombre}</a>`).join('')}</div>`:'' }
       <div class="row-actions">
         ${p.estado!=='pagado'?`<button class="btn btn-sm btn-sm-green" onclick="pagarCompleto(${p.id})">Marcar pagado</button>`:''}
         <button class="btn btn-sm" onclick="abrirPago(${p.id})">Editar</button>
@@ -1565,9 +1575,35 @@ function calcPagoPendiente(){
   el.textContent = diff>0 ? `Pendiente por pagar: $${diff.toFixed(2)}` : diff===0&&m>0 ? 'Pagado completo' : '';
 }
 
+let _pagoArchivos = [];
+
+function adjuntarArchivosPago(){
+  const input=document.getElementById('pg-archivo-input');
+  const MAX=5*1024*1024;
+  Array.from(input.files).forEach(file=>{
+    if(file.size>MAX){alert(`${file.name} supera 5 MB.`);return;}
+    const reader=new FileReader();
+    reader.onload=e=>{
+      _pagoArchivos.push({nombre:file.name,tipo:file.type,data:e.target.result});
+      renderArchivosPago();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+
+function renderArchivosPago(){
+  document.getElementById('pg-archivos-lista').innerHTML=_pagoArchivos.map((a,i)=>`
+    <div style="display:flex;align-items:center;gap:4px;background:#f0f0f0;border-radius:4px;padding:3px 8px;font-size:.78rem">
+      <span>📄 ${a.nombre}</span>
+      <button onclick="_pagoArchivos.splice(${i},1);renderArchivosPago()" style="background:none;border:none;cursor:pointer;color:#999;font-size:1rem;line-height:1">×</button>
+    </div>`).join('');
+}
+
 function abrirPago(id){
   _editPagoId=id||null;
   const p=id?D_pagos.find(x=>x.id===id):null;
+  _pagoArchivos = p?.archivos ? [...p.archivos] : [];
   document.getElementById('m-pago-titulo').textContent=p?'Editar pago':'Nuevo pago';
   document.getElementById('pg-proveedor').value=p?.proveedor||'';
   document.getElementById('pg-semana').value=p?.semana||semanaActual();
@@ -1578,6 +1614,7 @@ function abrirPago(id){
   document.getElementById('pg-notas').value=p?.notas||'';
   document.getElementById('m-pago-btn').textContent=p?'Guardar cambios':'Guardar';
   document.getElementById('pg-pendiente-info').textContent='';
+  renderArchivosPago();
   openModal('m-pago');
 }
 
@@ -1598,7 +1635,8 @@ async function guardarPago(){
     pagado:document.getElementById('pg-pagado').value||0,
     fecha:document.getElementById('pg-fecha').value||hoy(),
     metodo:document.getElementById('pg-metodo').value,
-    notas:document.getElementById('pg-notas').value.trim()
+    notas:document.getElementById('pg-notas').value.trim(),
+    archivos:_pagoArchivos
   };
   if(_editPagoId){
     await api('PUT','/api/pagos/'+_editPagoId,body);
