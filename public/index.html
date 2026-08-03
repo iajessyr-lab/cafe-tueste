@@ -1523,10 +1523,10 @@ async function renderPagos() {
   const tPend = D_pagos.filter(p=>p.estado==='pendiente').length;
 
   document.getElementById('pagos-stats').innerHTML=`
-    <div class="stat-card"><div class="val red">$${(tMonto-tPagado).toFixed(2)}</div><div class="lbl">Por pagar</div></div>
-    <div class="stat-card"><div class="val green">$${tPagado.toFixed(2)}</div><div class="lbl">Pagado</div></div>
+    <div class="stat-card"><div class="val red">${$m(tMonto-tPagado)}</div><div class="lbl">Por pagar</div></div>
+    <div class="stat-card"><div class="val green">${$m(tPagado)}</div><div class="lbl">Pagado</div></div>
     <div class="stat-card"><div class="val">${tPend}</div><div class="lbl">Pagos pendientes</div></div>
-    <div class="stat-card"><div class="val">$${tMonto.toFixed(2)}</div><div class="lbl">Total comprometido</div></div>`;
+    <div class="stat-card"><div class="val">${$m(tMonto)}</div><div class="lbl">Total comprometido</div></div>`;
 
   const el = document.getElementById('lista-pagos');
   if(!lista.length){el.innerHTML='<div class="empty">Sin pagos registrados.</div>';return;}
@@ -1545,9 +1545,9 @@ async function renderPagos() {
       <div class="row-meta">
         <span>${fmt(p.fecha)}</span>
         ${p.concepto?`<span>${p.concepto}</span>`:''}
-        <span>Total: $${parseFloat(p.monto).toFixed(2)}</span>
-        <span style="color:#27ae60">Pagado: $${parseFloat(p.pagado).toFixed(2)}</span>
-        ${pendiente>0?`<span style="color:#c0392b;font-weight:700">Debe: $${pendiente.toFixed(2)}</span>`:''}
+        <span>Total: ${$m(p.monto)}</span>
+        <span style="color:#27ae60">Pagado: ${$m(p.pagado)}</span>
+        ${pendiente>0?`<span style="color:#c0392b;font-weight:700">Debe: ${$m(pendiente)}</span>`:''}
         ${p.metodo?`<span>${p.metodo}</span>`:''}
       </div>
       ${p.notas?`<div style="font-size:.78rem;color:#999;margin-top:4px">${p.notas}</div>`:''}
