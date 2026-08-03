@@ -574,8 +574,8 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
     </div>
     <div class="fl"><label>Concepto</label><input id="pg-concepto" type="text" placeholder="ej. Cafe Castelan Lavado 120kg"></div>
     <div class="fg" style="grid-template-columns:1fr 1fr">
-      <div class="fl"><label>Total a pagar ($)</label><input id="pg-monto" type="number" step="0.01" placeholder="0.00" oninput="calcPagoPendiente()"></div>
-      <div class="fl"><label>Ya pagado ($)</label><input id="pg-pagado" type="number" step="0.01" placeholder="0.00" oninput="calcPagoPendiente()"></div>
+      <div class="fl"><label>Total a pagar</label><div style="position:relative"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#666;font-weight:600;pointer-events:none">$</span><input id="pg-monto" type="number" step="0.01" placeholder="0.00" oninput="calcPagoPendiente()" style="padding-left:22px"></div></div>
+      <div class="fl"><label>Ya pagado</label><div style="position:relative"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#666;font-weight:600;pointer-events:none">$</span><input id="pg-pagado" type="number" step="0.01" placeholder="0.00" oninput="calcPagoPendiente()" style="padding-left:22px"></div></div>
       <div class="fl"><label>Fecha</label><input id="pg-fecha" type="date"></div>
       <div class="fl"><label>Metodo</label>
         <select id="pg-metodo"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option><option>Pendiente</option></select>
@@ -1608,8 +1608,8 @@ function abrirPago(id){
   document.getElementById('pg-proveedor').value=p?.proveedor||'';
   document.getElementById('pg-semana').value=p?.semana||semanaActual();
   document.getElementById('pg-concepto').value=p?.concepto||'';
-  document.getElementById('pg-monto').value=p?.monto||'';
-  document.getElementById('pg-pagado').value=p?.pagado||'';
+  document.getElementById('pg-monto').value=p?.monto ? parseFloat(p.monto).toFixed(2) : '';
+  document.getElementById('pg-pagado').value=p?.pagado ? parseFloat(p.pagado).toFixed(2) : '';
   document.getElementById('pg-fecha').value=p?.fecha?p.fecha.slice(0,10):hoy();
   document.getElementById('pg-notas').value=p?.notas||'';
   document.getElementById('m-pago-btn').textContent=p?'Guardar cambios':'Guardar';
