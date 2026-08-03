@@ -1034,7 +1034,12 @@ function abrirEditarPedido(id){
 }
 
 function buildItemHTML(id, desc, cant, precio) {
-  const opts = D.productos.map(p=>`<option value="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio||0}">${p.nombre}</option>`).join('');
+  const tvMap={'punto_venta':'PV','mayoreo':'Mayoreo','ambos':'PV+May'};
+  const ttMap={'medio':'Medio','medio alto':'Med.Alto','alto':'Alto'};
+  const opts = D.productos.map(p=>{
+    const tags=[tvMap[p.tipo_venta],ttMap[p.tipo_tueste],p.presentacion].filter(Boolean).join(' · ');
+    return `<option value="${p.id}" data-nombre="${p.nombre}" data-precio="${p.precio||0}">${p.nombre}${tags?' — '+tags:''}</option>`;
+  }).join('');
   const s = `font-size:.68rem;font-weight:700;text-transform:uppercase;color:#999;margin-bottom:3px;display:block`;
   const inp = `width:100%;padding:8px 10px;border:1.5px solid #e5e5e5;border-radius:7px;font-size:.84rem`;
   return `
