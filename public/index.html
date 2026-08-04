@@ -465,15 +465,15 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 </div></div>
 
 <div class="overlay" id="m-cobro"><div class="modal">
-  <div class="modal-head"><h3>Registrar cobro</h3><button class="modal-close" onclick="closeModal('m-cobro')">&#x2715;</button></div>
+  <div class="modal-head"><h3 id="m-cobro-titulo">Registrar cobro</h3><button class="modal-close" onclick="closeModal('m-cobro')">&#x2715;</button></div>
   <div class="modal-body">
-    <div class="fl"><label>Cliente</label>
+    <div class="fl" id="c-cliente-row"><label>Cliente</label>
       <select id="c-cliente-sel" onchange="seleccionarClienteCobro()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.88rem;background:#fff">
         <option value="">-- Seleccionar cliente --</option>
       </select>
       <input type="hidden" id="c-cliente">
     </div>
-    <div class="fl"><label>Pedido pendiente (opcional)</label>
+    <div class="fl" id="c-pedido-row"><label>Pedido pendiente (opcional)</label>
       <select id="c-pedido-sel" onchange="seleccionarPedidoCobro()" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.88rem;background:#fff">
         <option value="">-- Vincular a un pedido --</option>
       </select>
@@ -483,14 +483,24 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <div class="fl"><label>Total ($)</label><input id="c-total" type="number" step="0.01" placeholder="0.00"></div>
       <div class="fl"><label>Pagado ($)</label><input id="c-pagado" type="number" step="0.01" placeholder="0.00"></div>
       <div class="fl"><label>Fecha</label><input id="c-fecha" type="date"></div>
-      <div class="fl"><label>Metodo</label>
-        <select id="c-metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Pendiente</option></select>
+      <div class="fl"><label>Método de pago</label>
+        <select id="c-metodo" onchange="toggleResponsable()">
+          <option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Pendiente</option>
+        </select>
+      </div>
+      <div class="fl" id="c-responsable-row"><label>Recibió (responsable)</label>
+        <input id="c-responsable" type="text" placeholder="ej. Jessy, Manu...">
       </div>
     </div>
+    <div id="c-factura-info" style="display:none;background:#f8fff8;border:1px solid #c3e6cb;border-radius:8px;padding:10px 14px;margin-top:4px;font-size:.83rem">
+      <strong>📄 Factura vinculada al pedido:</strong>
+      <span id="c-factura-detalle"></span>
+    </div>
+    <div class="fl"><label>Notas</label><input id="c-notas" type="text" placeholder="Observaciones del cobro..."></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-cobro')">Cancelar</button>
-    <button class="btn btn-dark" onclick="guardarCobro()">Guardar</button>
+    <button class="btn btn-dark" id="m-cobro-btn" onclick="guardarCobro()">Guardar</button>
   </div>
 </div></div>
 
@@ -511,10 +521,15 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 <div class="overlay" id="m-cliente"><div class="modal">
   <div class="modal-head"><h3 id="m-cliente-titulo">Nuevo cliente</h3><button class="modal-close" onclick="closeModal('m-cliente')">&#x2715;</button></div>
   <div class="modal-body">
-    <div class="fl"><label>Nombre</label><input id="cl-nombre" type="text"></div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Nombre del negocio / cliente</label><input id="cl-nombre" type="text"></div>
+      <div class="fl"><label>Encargado / Contacto</label><input id="cl-encargado" type="text" placeholder="ej. Jorge Ramírez"></div>
+    </div>
     <div class="fl"><label>Tipo</label><select id="cl-tipo"><option value="b2b">Cafeteria / Negocio</option><option value="b2c">Particular</option></select></div>
-    <div class="fl"><label>Telefono</label><input id="cl-tel" type="text"></div>
-    <div class="fl"><label>Email</label><input id="cl-email" type="email"></div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Telefono</label><input id="cl-tel" type="text"></div>
+      <div class="fl"><label>Email</label><input id="cl-email" type="email"></div>
+    </div>
     <div class="fl"><label>Direccion</label><input id="cl-dir" type="text"></div>
     <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#aaa;margin:10px 0 6px;border-top:1px solid #f0f0f0;padding-top:10px">Datos fiscales (opcional)</div>
     <div class="fg" style="grid-template-columns:1fr 1fr">
@@ -1307,10 +1322,13 @@ function renderCobros() {
         ${pend>0?`<span style="background:#fde8e8;color:#c0392b">Pendiente ${$m(pend)}</span>`:''}
         <span>${fmt(c.fecha)}</span>
         ${c.metodo?`<span>${c.metodo}</span>`:''}
+        ${c.responsable?`<span>👤 ${c.responsable}</span>`:''}
       </div>
+      ${c.notas?`<div style="font-size:.78rem;color:#999;margin-top:4px">${c.notas}</div>`:''}
       ${c._e!=='pagado'?`<div class="prog"><div class="prog-fill" style="width:${prog}%"></div></div>`:''}
       <div class="row-actions">
         ${c._e!=='pagado'?`<button class="btn btn-sm btn-sm-green" onclick="saldarCobro(${c.id})">Marcar pagado</button>`:''}
+        <button class="btn btn-sm" onclick="abrirEditarCobro(${c.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminar('cobros',${c.id})">Eliminar</button>
       </div>
     </div>`;
@@ -1319,25 +1337,65 @@ function renderCobros() {
 
 async function saldarCobro(id){
   const c=D.cobros.find(x=>x.id===id); if(!c) return;
-  const u=await api('PUT',`/api/cobros/${id}`,{pagado:c.total,metodo:c.metodo});
+  const u=await api('PUT',`/api/cobros/${id}`,{pagado:c.total,metodo:c.metodo,concepto:c.concepto,total:c.total,fecha:c.fecha?c.fecha.slice(0,10):hoy(),responsable:c.responsable,notas:c.notas});
   Object.assign(c,u); renderCobros(); renderDashboard();
 }
 
+let _editCobroId = null;
+
+function toggleResponsable(){
+  const m = document.getElementById('c-metodo').value;
+  document.getElementById('c-responsable-row').style.display = m==='Efectivo' ? '' : 'none';
+}
+
+function abrirEditarCobro(id){
+  _editCobroId = id;
+  const c = D.cobros.find(x=>x.id===id); if(!c) return;
+  document.getElementById('m-cobro-titulo').textContent = 'Editar cobro';
+  document.getElementById('m-cobro-btn').textContent = 'Guardar cambios';
+  document.getElementById('c-cliente-row').style.display = 'none';
+  document.getElementById('c-pedido-row').style.display = 'none';
+  document.getElementById('c-cliente').value = c.cliente_nombre;
+  document.getElementById('c-concepto').value = c.concepto||'';
+  document.getElementById('c-total').value = parseFloat(c.total||0).toFixed(2);
+  document.getElementById('c-pagado').value = parseFloat(c.pagado||0).toFixed(2);
+  document.getElementById('c-fecha').value = c.fecha ? c.fecha.slice(0,10) : hoy();
+  document.getElementById('c-metodo').value = c.metodo||'Efectivo';
+  document.getElementById('c-responsable').value = c.responsable||'';
+  document.getElementById('c-notas').value = c.notas||'';
+  toggleResponsable();
+  // mostrar factura vinculada si hay pedido
+  const ped = c.pedido_id ? D.pedidos?.find(p=>p.id===c.pedido_id) : null;
+  const fi = document.getElementById('c-factura-info');
+  if(ped && ped.requiere_factura){
+    fi.style.display='';
+    document.getElementById('c-factura-detalle').innerHTML = ped.factura_emitida
+      ? ` <span style="color:#27ae60;font-weight:700">✓ Emitida</span> · RFC: ${ped.rfc||'-'} · ${ped.razon_social||''}`
+      : ` <span style="color:#e67e22;font-weight:700">⚠ Pendiente de emitir</span> · RFC: ${ped.rfc||'-'} · ${ped.razon_social||''}`;
+  } else { fi.style.display='none'; }
+  openModal('m-cobro');
+}
+
 function abrirModalCobro() {
-  // poblar clientes
+  _editCobroId = null;
+  document.getElementById('m-cobro-titulo').textContent = 'Registrar cobro';
+  document.getElementById('m-cobro-btn').textContent = 'Guardar';
+  document.getElementById('c-cliente-row').style.display = '';
+  document.getElementById('c-pedido-row').style.display = '';
+  document.getElementById('c-factura-info').style.display = 'none';
   const cSel = document.getElementById('c-cliente-sel');
   cSel.innerHTML = '<option value="">-- Seleccionar cliente --</option>' +
     D.clientes.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('');
-  // poblar pedidos pendientes de cobro
   const pSel = document.getElementById('c-pedido-sel');
   const pendientes = D.cobros.filter(c=>parseFloat(c.pagado||0)<parseFloat(c.total||0));
   pSel.innerHTML = '<option value="">-- Vincular a un pedido --</option>' +
-    pendientes.map(c=>`<option value="${c.id}" data-cliente="${c.cliente_nombre}" data-total="${c.total}" data-concepto="${c.concepto||''}">${c.cliente_nombre} — ${c.concepto||'Pedido'} ($${parseFloat(c.total).toFixed(2)})</option>`).join('');
-  // limpiar campos
-  ['c-cliente','c-concepto'].forEach(i=>document.getElementById(i).value='');
+    pendientes.map(c=>`<option value="${c.id}" data-cliente="${c.cliente_nombre}" data-total="${c.total}" data-concepto="${c.concepto||''}">${c.cliente_nombre} — ${c.concepto||'Pedido'} (${$m(c.total)})</option>`).join('');
+  ['c-cliente','c-concepto','c-responsable','c-notas'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('c-total').value='';
   document.getElementById('c-pagado').value='';
   document.getElementById('c-fecha').value=hoy();
+  document.getElementById('c-metodo').value='Efectivo';
+  toggleResponsable();
   openModal('m-cobro');
 }
 
@@ -1361,14 +1419,26 @@ function seleccionarPedidoCobro() {
 async function guardarCobro(){
   const cliente=document.getElementById('c-cliente').value.trim();
   if(!cliente) return alert('Ingresa el cliente.');
-  const n=await api('POST','/api/cobros',{
-    cliente_nombre:cliente,concepto:document.getElementById('c-concepto').value.trim(),
+  const body={
+    cliente_nombre:cliente,
+    concepto:document.getElementById('c-concepto').value.trim(),
     total:parseFloat(document.getElementById('c-total').value)||0,
     pagado:parseFloat(document.getElementById('c-pagado').value)||0,
     fecha:document.getElementById('c-fecha').value||hoy(),
-    metodo:document.getElementById('c-metodo').value
-  });
-  D.cobros.unshift(n); closeModal('m-cobro'); renderCobros(); renderDashboard();
+    metodo:document.getElementById('c-metodo').value,
+    responsable:document.getElementById('c-responsable').value.trim(),
+    notas:document.getElementById('c-notas').value.trim()
+  };
+  if(_editCobroId){
+    const n=await api('PUT','/api/cobros/'+_editCobroId,body);
+    const i=D.cobros.findIndex(x=>x.id===_editCobroId);
+    if(i>=0) D.cobros[i]=n;
+    _editCobroId=null;
+  } else {
+    const n=await api('POST','/api/cobros',body);
+    D.cobros.unshift(n);
+  }
+  closeModal('m-cobro'); renderCobros(); renderDashboard();
 }
 
 function fc(f,btn){
@@ -1384,7 +1454,10 @@ function renderClientes(){
   el.innerHTML=D.clientes.map(c=>`
     <div class="row">
       <div class="row-top">
-        <div class="row-title">${c.nombre}</div>
+        <div>
+          <div class="row-title">${c.nombre}</div>
+          ${c.encargado?`<div style="font-size:.76rem;color:#888;margin-top:2px">👤 ${c.encargado}</div>`:''}
+        </div>
         <span class="badge ${c.tipo==='b2b'?'b-dark':'b-gray'}">${c.tipo==='b2b'?'B2B':'Particular'}</span>
       </div>
       <div class="row-meta">
@@ -1407,6 +1480,7 @@ function abrirEditarCliente(id){
   _editClienteId = id;
   document.getElementById('m-cliente-titulo').textContent = 'Editar cliente';
   document.getElementById('cl-nombre').value = c.nombre||'';
+  document.getElementById('cl-encargado').value = c.encargado||'';
   document.getElementById('cl-tipo').value = c.tipo||'b2b';
   document.getElementById('cl-tel').value = c.telefono||'';
   document.getElementById('cl-email').value = c.email||'';
@@ -1420,7 +1494,9 @@ function abrirEditarCliente(id){
 async function guardarCliente(){
   const nombre=document.getElementById('cl-nombre').value.trim();
   if(!nombre) return alert('Ingresa el nombre.');
-  const body={nombre,tipo:document.getElementById('cl-tipo').value,
+  const body={nombre,
+    encargado:document.getElementById('cl-encargado').value.trim(),
+    tipo:document.getElementById('cl-tipo').value,
     telefono:document.getElementById('cl-tel').value,email:document.getElementById('cl-email').value,
     direccion:document.getElementById('cl-dir').value,
     rfc:document.getElementById('cl-rfc').value.trim().toUpperCase(),

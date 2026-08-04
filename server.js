@@ -359,17 +359,17 @@ app.get('/api/clientes', auth, async (req, res) => {
   res.json(r.rows);
 });
 app.post('/api/clientes', auth, async (req, res) => {
-  const { nombre,tipo,telefono,email,direccion,notas,rfc,razon_social } = req.body;
+  const { nombre,tipo,telefono,email,direccion,notas,rfc,razon_social,encargado } = req.body;
   const r = await pool.query(
-    'INSERT INTO ct_clientes (nombre,tipo,telefono,email,direccion,notas,rfc,razon_social) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
-    [nombre,tipo||'b2b',telefono||null,email||null,direccion||null,notas||null,rfc||null,razon_social||null]);
+    'INSERT INTO ct_clientes (nombre,tipo,telefono,email,direccion,notas,rfc,razon_social,encargado) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+    [nombre,tipo||'b2b',telefono||null,email||null,direccion||null,notas||null,rfc||null,razon_social||null,encargado||null]);
   res.json(r.rows[0]);
 });
 app.put('/api/clientes/:id', auth, async (req, res) => {
-  const { nombre,tipo,telefono,email,direccion,notas,rfc,razon_social } = req.body;
+  const { nombre,tipo,telefono,email,direccion,notas,rfc,razon_social,encargado } = req.body;
   const r = await pool.query(
-    'UPDATE ct_clientes SET nombre=$1,tipo=$2,telefono=$3,email=$4,direccion=$5,notas=$6,rfc=$7,razon_social=$8 WHERE id=$9 RETURNING *',
-    [nombre,tipo||'b2b',telefono||null,email||null,direccion||null,notas||null,rfc||null,razon_social||null,req.params.id]);
+    'UPDATE ct_clientes SET nombre=$1,tipo=$2,telefono=$3,email=$4,direccion=$5,notas=$6,rfc=$7,razon_social=$8,encargado=$9 WHERE id=$10 RETURNING *',
+    [nombre,tipo||'b2b',telefono||null,email||null,direccion||null,notas||null,rfc||null,razon_social||null,encargado||null,req.params.id]);
   res.json(r.rows[0]);
 });
 app.delete('/api/clientes/:id', auth, async (req, res) => {
@@ -420,6 +420,7 @@ app.get('/api/pedidos', auth, async (req, res) => {
   await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS factura_emitida BOOLEAN DEFAULT FALSE');
   await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS rfc VARCHAR(20)');
   await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300)');
+  await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS encargado VARCHAR(150)');
   const r = await pool.query(`
     SELECT p.*, json_agg(pi.*) as items
     FROM ct_pedidos p
@@ -481,18 +482,23 @@ app.delete('/api/pedidos/:id', auth, async (req, res) => {
 
 // ─── COBROS ───────────────────────────────────────────────────────────────────
 app.get('/api/cobros', auth, async (req, res) => {
+  await pool.query('ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS responsable VARCHAR(150)');
+  await pool.query('ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS notas TEXT');
   const r = await pool.query('SELECT * FROM ct_cobros ORDER BY creado_en DESC');
   res.json(r.rows);
 });
 app.post('/api/cobros', auth, async (req, res) => {
-  const { cliente_id,cliente_nombre,concepto,total,pagado,fecha,metodo } = req.body;
-  const r = await pool.query('INSERT INTO ct_cobros (cliente_id,cliente_nombre,concepto,total,pagado,fecha,metodo) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-    [cliente_id||null,cliente_nombre,concepto,total||0,pagado||0,fecha,metodo]);
+  const { cliente_id,cliente_nombre,concepto,total,pagado,fecha,metodo,responsable,notas } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_cobros (cliente_id,cliente_nombre,concepto,total,pagado,fecha,metodo,responsable,notas) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+    [cliente_id||null,cliente_nombre,concepto,total||0,pagado||0,fecha,metodo,responsable||null,notas||null]);
   res.json(r.rows[0]);
 });
 app.put('/api/cobros/:id', auth, async (req, res) => {
-  const { pagado,metodo } = req.body;
-  const r = await pool.query('UPDATE ct_cobros SET pagado=$1,metodo=$2 WHERE id=$3 RETURNING *', [pagado,metodo,req.params.id]);
+  const { pagado,metodo,concepto,total,fecha,responsable,notas } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_cobros SET pagado=$1,metodo=$2,concepto=$3,total=$4,fecha=$5,responsable=$6,notas=$7 WHERE id=$8 RETURNING *',
+    [pagado,metodo,concepto||null,total||0,fecha,responsable||null,notas||null,req.params.id]);
   res.json(r.rows[0]);
 });
 app.delete('/api/cobros/:id', auth, async (req, res) => {
