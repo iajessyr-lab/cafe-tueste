@@ -1647,7 +1647,7 @@ function calcPagoPendiente(){
   const p=parseFloat(document.getElementById('pg-pagado').value||0);
   const diff=m-p;
   const el=document.getElementById('pg-pendiente-info');
-  el.textContent = diff>0 ? `Pendiente por pagar: $${diff.toFixed(2)}` : diff===0&&m>0 ? 'Pagado completo' : '';
+  el.textContent = diff>0 ? `Pendiente por pagar: ${$m(diff)}` : diff===0&&m>0 ? 'Pagado completo' : '';
 }
 
 let _pagoArchivos = [];
