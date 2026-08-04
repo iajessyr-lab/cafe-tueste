@@ -597,6 +597,20 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
 </div></div>
 
+<div class="overlay" id="m-wa"><div class="modal" style="max-width:480px">
+  <div class="modal-head"><h3>💬 Enviar WhatsApp</h3><button class="modal-close" onclick="closeModal('m-wa')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div style="font-size:.82rem;color:#555;margin-bottom:10px">Revisa el mensaje antes de enviarlo. Se abrirá WhatsApp Web.</div>
+    <div class="fl"><label>Para</label><input id="wa-nombre" type="text" readonly style="background:#f9f9f9;color:#555"></div>
+    <div class="fl"><label>Teléfono</label><input id="wa-tel" type="text" style="background:#f9f9f9"></div>
+    <div class="fl"><label>Mensaje</label><textarea id="wa-msg" rows="7" style="font-size:.85rem;line-height:1.5"></textarea></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-wa')">Cancelar</button>
+    <button class="btn btn-dark" style="background:#25D366;border-color:#25D366" onclick="enviarWA()">💬 Abrir WhatsApp</button>
+  </div>
+</div></div>
+
 <div class="overlay" id="m-entrega"><div class="modal">
   <div class="modal-head"><h3 id="m-entrega-titulo">Nueva entrega</h3><button class="modal-close" onclick="closeModal('m-entrega')">&#x2715;</button></div>
   <div class="modal-body">
@@ -747,7 +761,7 @@ const ACTIONS = {
   inventario: ()=>`<button class="btn btn-dark" onclick="abrirVerde()">+ Agregar cafe verde</button>`,
   pedidos: ()=>`<button class="btn btn-dark" onclick="openModal('m-pedido');initPedidoForm()">+ Nuevo pedido</button>`,
   cobros: ()=>`<button class="btn btn-dark" onclick="abrirModalCobro()">+ Registrar cobro</button>`,
-  clientes: ()=>`<button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button>`,
+  clientes: ()=>`<div style="display:flex;gap:8px"><button class="btn btn-outline" onclick="abrirLunesRecordatorio()" title="Enviar seguimiento semanal por WhatsApp">📅 Seguimiento</button><button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button></div>`,
   productos: ()=>`<button class="btn btn-dark" onclick="abrirProducto()">+ Nuevo producto</button>`,
   pagos: ()=>`<button class="btn btn-dark" onclick="abrirPago()">+ Nuevo pago</button>`,
   sucursales: ()=>`<button class="btn btn-dark" onclick="resetEntregaForm();poblarProductosEntrega();openModal('m-entrega')">+ Nueva entrega</button>`,
@@ -1447,6 +1461,67 @@ function fc(f,btn){
   btn.classList.add('on'); renderCobros();
 }
 
+// ─── WHATSAPP ──────────────────────────────────────────────────────────────────
+const WA_LINK = `${location.origin}/orden`;
+
+function msgSeguimiento(nombre) {
+  return `Hola ${nombre} 👋, te saluda Mango Roasters.\n\nQueremos saber si tienes pedido para esta semana ☕\n\nAquí puedes seleccionar tu café y cantidad fácilmente:\n👉 ${WA_LINK}\n\nCualquier duda estamos para servirte. ¡Que tengas buen día!`;
+}
+
+function abrirWA(id) {
+  const c = D.clientes.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('wa-nombre').value = c.nombre + (c.encargado ? ` · ${c.encargado}` : '');
+  document.getElementById('wa-tel').value = c.telefono || '';
+  document.getElementById('wa-msg').value = msgSeguimiento(c.encargado || c.nombre);
+  openModal('m-wa');
+}
+
+function enviarWA() {
+  const tel = document.getElementById('wa-tel').value.replace(/\D/g, '');
+  const msg = document.getElementById('wa-msg').value.trim();
+  if (!tel) return alert('Este cliente no tiene teléfono registrado.');
+  const url = `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+  closeModal('m-wa');
+}
+
+function abrirLunesRecordatorio() {
+  const hoy = new Date();
+  const lista = D.clientes.filter(c => c.telefono);
+  if (!lista.length) return alert('No hay clientes con teléfono registrado.');
+  let html = `<div style="padding:20px">
+    <h3 style="margin-bottom:6px">📅 Seguimiento del lunes</h3>
+    <p style="font-size:.82rem;color:#888;margin-bottom:16px">Clientes con WhatsApp — haz clic para abrir el chat con el mensaje listo.</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+    ${lista.map(c=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#f9f9f9;border-radius:9px;padding:10px 14px">
+        <div>
+          <div style="font-weight:700;font-size:.9rem">${c.nombre}</div>
+          ${c.encargado?`<div style="font-size:.75rem;color:#888">👤 ${c.encargado}</div>`:''}
+          <div style="font-size:.75rem;color:#aaa">${c.telefono}</div>
+        </div>
+        <button onclick="enviarWADirecto('${(c.encargado||c.nombre).replace(/'/g,"\\'")}','${c.telefono}')" style="background:#25D366;color:#fff;border:none;border-radius:7px;padding:7px 13px;font-size:.8rem;font-weight:700;cursor:pointer">💬 Enviar</button>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:16px;padding:12px;background:#fffbea;border-radius:8px;font-size:.78rem;color:#856404">
+      💡 <strong>Tip:</strong> Para mensajes automáticos programados (sin presionar nada) se necesita la WhatsApp Business API de Meta. Puedes solicitarla en business.whatsapp.com
+    </div>
+  </div>`;
+  const overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`<div style="background:#fff;border-radius:16px;max-width:500px;width:95%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">${html}<div style="padding:0 20px 20px"><button onclick="this.closest('.wa-overlay').remove()" style="width:100%;padding:11px;border:1.5px solid #eee;background:#fff;border-radius:9px;cursor:pointer;font-weight:600">Cerrar</button></div></div>`;
+  overlay.className='wa-overlay';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  document.body.appendChild(overlay);
+}
+
+function enviarWADirecto(nombre, tel) {
+  const telLimpio = tel.replace(/\D/g,'');
+  const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(msgSeguimiento(nombre))}`;
+  window.open(url,'_blank');
+}
+
 // ─── CLIENTES ──────────────────────────────────────────────────────────────────
 function renderClientes(){
   const el=document.getElementById('lista-clientes');
@@ -1466,6 +1541,7 @@ function renderClientes(){
         ${c.direccion?`<span>${c.direccion}</span>`:''}
       </div>
       <div class="row-actions">
+        ${c.telefono?`<button class="btn btn-sm" style="background:#25D366;color:#fff;border-color:#25D366" onclick="abrirWA(${c.id})">💬 WhatsApp</button>`:''}
         <button class="btn btn-sm" onclick="abrirEditarCliente(${c.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminar('clientes',${c.id})">Eliminar</button>
       </div>

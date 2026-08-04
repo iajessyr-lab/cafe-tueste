@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mango Roasters · Hacer pedido</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;min-height:100vh}
+  .header{background:#111;padding:20px 24px;display:flex;align-items:center;gap:14px}
+  .header img{height:36px}
+  .header-text{color:#fff}
+  .header-text h1{font-size:1.1rem;font-weight:700;letter-spacing:-.3px}
+  .header-text p{font-size:.75rem;color:#aaa;margin-top:1px}
+  .container{max-width:540px;margin:0 auto;padding:20px 16px 60px}
+  .card{background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+  .card h2{font-size:.95rem;font-weight:700;margin-bottom:14px;color:#111}
+  label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#999;margin-bottom:5px}
+  input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid #e5e5e5;border-radius:9px;font-size:.9rem;font-family:inherit;outline:none;transition:border .15s}
+  input:focus,select:focus,textarea:focus{border-color:#111}
+  .fg{display:grid;gap:12px;margin-bottom:12px}
+  .fl{margin-bottom:12px}
+  .prod-item{border:1.5px solid #eee;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;transition:border .15s}
+  .prod-item.selected{border-color:#111;background:#f9f9f9}
+  .prod-check{width:20px;height:20px;accent-color:#111;cursor:pointer;flex-shrink:0}
+  .prod-info{flex:1;min-width:0}
+  .prod-name{font-size:.88rem;font-weight:600;color:#111}
+  .prod-meta{font-size:.73rem;color:#999;margin-top:2px}
+  .prod-qty{display:none;align-items:center;gap:8px;margin-top:10px}
+  .prod-item.selected .prod-qty{display:flex}
+  .qty-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid #ddd;background:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:#333}
+  .qty-btn:active{background:#f0f0f0}
+  .qty-val{font-size:1rem;font-weight:700;min-width:28px;text-align:center}
+  .qty-unit{font-size:.8rem;color:#999}
+  .btn-submit{width:100%;padding:14px;background:#111;color:#fff;border:none;border-radius:11px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:4px}
+  .btn-submit:active{opacity:.85}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.68rem;font-weight:700;margin-left:6px}
+  .b-dark{background:#111;color:#fff}
+  .b-gray{background:#eee;color:#555}
+  .b-blue{background:#e8f4fd;color:#2980b9}
+  .b-orange{background:#fef9e7;color:#d68910}
+  .success{text-align:center;padding:40px 20px}
+  .success .icon{font-size:3.5rem;margin-bottom:16px}
+  .success h2{font-size:1.3rem;font-weight:800;margin-bottom:8px}
+  .success p{color:#666;font-size:.9rem;line-height:1.5}
+  .success .btn-back{display:inline-block;margin-top:24px;padding:12px 28px;background:#111;color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:.9rem}
+  .empty{text-align:center;padding:30px;color:#aaa;font-size:.9rem}
+  .loading{text-align:center;padding:30px;color:#999}
+  #filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .fbtn{padding:6px 14px;border-radius:20px;border:1.5px solid #e5e5e5;background:#fff;font-size:.8rem;cursor:pointer;font-weight:600;color:#555}
+  .fbtn.on{background:#111;color:#fff;border-color:#111}
+  .resumen-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:.85rem}
+  .resumen-item:last-child{border:none}
+</style>
+</head>
+<body>
+<div class="header">
+  <img src="/logo.png" alt="Mango Roasters">
+  <div class="header-text">
+    <h1>Mango Roasters</h1>
+    <p>Haz tu pedido de café</p>
+  </div>
+</div>
+
+<div class="container" id="app">
+  <div class="loading">Cargando catálogo...</div>
+</div>
+
+<script>
+let productos = [];
+let seleccion = {}; // {id: cantidad}
+let paso = 1;
+
+const tvMap = {punto_venta:'Punto de Venta', mayoreo:'Mayoreo', ambos:'PV + May'};
+const ttMap = {medio:'Medio', 'medio alto':'Med. Alto', alto:'Alto'};
+
+async function init() {
+  try {
+    const r = await fetch('/api/catalogo-publico');
+    productos = await r.json();
+    renderPaso1();
+  } catch(e) {
+    document.getElementById('app').innerHTML = '<div class="empty">Error cargando catálogo. Intenta de nuevo.</div>';
+  }
+}
+
+function renderPaso1() {
+  paso = 1;
+  const cafe = productos.filter(p => !p.categoria || p.categoria === 'cafe');
+  const otros = productos.filter(p => p.categoria && p.categoria !== 'cafe');
+
+  const catLabel = {leche:'Leche / Lácteos', empaque:'Empaque', insumo:'Insumo', otro:'Otro'};
+
+  const renderGrupo = (lista, titulo) => {
+    if (!lista.length) return '';
+    return `
+      <div class="card">
+        <h2>${titulo}</h2>
+        ${lista.map(p => {
+          const tags = [tvMap[p.tipo_venta], ttMap[p.tipo_tueste], p.presentacion].filter(Boolean);
+          const qty = seleccion[p.id] || 1;
+          return `<div class="prod-item${seleccion[p.id]?` selected`:''}" id="pi-${p.id}">
+            <input type="checkbox" class="prod-check" ${seleccion[p.id]?'checked':''} onchange="toggleProd(${p.id},this.checked)">
+            <div class="prod-info">
+              <div class="prod-name">${p.nombre}
+                ${tags.map(t=>`<span class="badge b-gray">${t}</span>`).join('')}
+              </div>
+              ${p.precio?`<div class="prod-meta">$${parseFloat(p.precio).toLocaleString('es-MX',{minimumFractionDigits:2})} / unidad</div>`:''}
+              ${p.origen?`<div class="prod-meta">📍 ${p.origen}${p.varietal?' · 🌱 '+p.varietal:''}${p.altura?' · ⛰ '+p.altura:''}</div>`:''}
+              <div class="prod-qty">
+                <button class="qty-btn" onclick="cambiarQty(${p.id},-1)">−</button>
+                <span class="qty-val" id="qty-${p.id}">${qty}</span>
+                <button class="qty-btn" onclick="cambiarQty(${p.id},1)">+</button>
+                <span class="qty-unit">unidades</span>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  };
+
+  const selCount = Object.keys(seleccion).length;
+
+  document.getElementById('app').innerHTML = `
+    ${renderGrupo(cafe, '☕ Café')}
+    ${otros.length ? renderGrupo(otros, '📦 Otros productos') : ''}
+    ${!productos.length ? '<div class="empty">No hay productos disponibles por el momento.</div>' : ''}
+    ${selCount > 0 ? `
+    <button class="btn-submit" onclick="renderPaso2()">
+      Continuar con ${selCount} producto${selCount>1?'s':''} →
+    </button>` : ''}
+  `;
+}
+
+function toggleProd(id, checked) {
+  if (checked) { seleccion[id] = seleccion[id] || 1; }
+  else { delete seleccion[id]; }
+  renderPaso1();
+}
+
+function cambiarQty(id, delta) {
+  const nuevo = (seleccion[id] || 1) + delta;
+  if (nuevo < 1) return;
+  seleccion[id] = nuevo;
+  document.getElementById('qty-' + id).textContent = nuevo;
+}
+
+function renderPaso2() {
+  paso = 2;
+  const items = Object.entries(seleccion).map(([id, qty]) => {
+    const p = productos.find(x => x.id == id);
+    return p ? {p, qty} : null;
+  }).filter(Boolean);
+
+  document.getElementById('app').innerHTML = `
+    <div class="card">
+      <h2>Tu pedido</h2>
+      ${items.map(({p, qty}) => `
+        <div class="resumen-item">
+          <span><strong>${p.nombre}</strong>${p.presentacion?` · ${p.presentacion}`:''}</span>
+          <span>x${qty}</span>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <h2>Tus datos</h2>
+      <div class="fl"><label>Nombre / Negocio</label><input id="ord-nombre" type="text" placeholder="ej. Cafetería Dosis"></div>
+      <div class="fl"><label>Teléfono (WhatsApp)</label><input id="ord-tel" type="tel" placeholder="+52 686 000 0000"></div>
+      <div class="fl"><label>Notas adicionales (opcional)</label><textarea id="ord-notas" rows="2" placeholder="Instrucciones de entrega, comentarios..."></textarea></div>
+    </div>
+    <button class="btn-submit" onclick="enviarPedido()">📦 Enviar pedido</button>
+    <div style="text-align:center;margin-top:14px">
+      <a href="#" onclick="renderPaso1();return false" style="font-size:.85rem;color:#999">← Volver al catálogo</a>
+    </div>
+  `;
+}
+
+async function enviarPedido() {
+  const nombre = document.getElementById('ord-nombre').value.trim();
+  const tel = document.getElementById('ord-tel').value.trim();
+  if (!nombre) return alert('Por favor ingresa tu nombre o negocio.');
+
+  const items = Object.entries(seleccion).map(([id, qty]) => {
+    const p = productos.find(x => x.id == id);
+    return p ? {producto_id: p.id, descripcion: p.nombre + (p.presentacion ? ' · ' + p.presentacion : ''), cantidad: qty, precio_unitario: p.precio || 0, subtotal: (p.precio || 0) * qty} : null;
+  }).filter(Boolean);
+
+  const total = items.reduce((a, i) => a + i.subtotal, 0);
+  const nota = (document.getElementById('ord-notas').value.trim() || '') + (tel ? ` | Tel: ${tel}` : '') + ' | Pedido vía formulario web';
+
+  try {
+    await fetch('/api/orden-publica', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({cliente_nombre: nombre, telefono: tel, nota, items, total})
+    });
+    renderExito(nombre);
+  } catch(e) {
+    alert('Error al enviar. Intenta de nuevo.');
+  }
+}
+
+function renderExito(nombre) {
+  document.getElementById('app').innerHTML = `
+    <div class="success">
+      <div class="icon">✅</div>
+      <h2>¡Pedido recibido!</h2>
+      <p>Hola <strong>${nombre}</strong>, ya recibimos tu pedido.<br>Nos pondremos en contacto contigo por WhatsApp para confirmar los detalles.</p>
+      <p style="margin-top:16px;font-size:.8rem;color:#bbb">Mango Roasters · Mexicali y Ensenada</p>
+      <a class="btn-back" href="/orden" onclick="seleccion={};return true">Hacer otro pedido</a>
+    </div>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>

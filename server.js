@@ -377,6 +377,31 @@ app.delete('/api/clientes/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── ORDEN PUBLICA (sin auth) ─────────────────────────────────────────────────
+app.get('/api/catalogo-publico', async (req, res) => {
+  const r = await pool.query('SELECT id,nombre,presentacion,tipo_tueste,tipo_venta,origen,varietal,altura,precio,categoria FROM ct_productos WHERE activo=TRUE ORDER BY nombre');
+  res.json(r.rows);
+});
+app.post('/api/orden-publica', async (req, res) => {
+  const { cliente_nombre, telefono, nota, items, total } = req.body;
+  const nombre = cliente_nombre || 'Cliente web';
+  const notaFinal = nota || '';
+  const r = await pool.query(
+    'INSERT INTO ct_pedidos (cliente_nombre,fecha_pedido,total,nota,estado) VALUES ($1,NOW()::date,$2,$3,\'pendiente\') RETURNING *',
+    [nombre, total || 0, `📱 PEDIDO WEB · Tel: ${telefono||'-'} · ${notaFinal}`]
+  );
+  const pedido = r.rows[0];
+  if (items && items.length) {
+    for (const it of items) {
+      await pool.query(
+        'INSERT INTO ct_pedido_items (pedido_id,descripcion,cantidad,unidad,precio_unitario,subtotal) VALUES ($1,$2,$3,$4,$5,$6)',
+        [pedido.id, it.descripcion, it.cantidad, 'pza', it.precio_unitario||0, it.subtotal||0]
+      );
+    }
+  }
+  res.json({ ok: true, id: pedido.id });
+});
+
 // ─── PRODUCTOS ────────────────────────────────────────────────────────────────
 app.get('/api/productos', auth, async (req, res) => {
   await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS tipo_tueste VARCHAR(50)');
