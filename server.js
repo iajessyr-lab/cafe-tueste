@@ -377,6 +377,8 @@ app.delete('/api/clientes/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/orden', (req, res) => res.sendFile(path.join(__dirname, 'public', 'orden.html')));
+
 // ─── ORDEN PUBLICA (sin auth) ─────────────────────────────────────────────────
 app.get('/api/catalogo-publico', async (req, res) => {
   const r = await pool.query('SELECT id,nombre,presentacion,tipo_tueste,tipo_venta,origen,varietal,altura,precio,categoria FROM ct_productos WHERE activo=TRUE ORDER BY nombre');
