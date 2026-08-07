@@ -686,7 +686,7 @@ let editLoteId = null, editVerdeId = null;
 
 const hoy = () => new Date().toISOString().split('T')[0];
 const $m = n => '$'+parseFloat(n||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmt = d => d ? new Date(d+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '-';
+const fmt = d => d ? new Date(d.slice(0,10)+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '-';
 
 // ─── API ───────────────────────────────────────────────────────────────────────
 async function api(method, url, body) {
