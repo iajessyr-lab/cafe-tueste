@@ -511,21 +511,22 @@ app.delete('/api/pedidos/:id', auth, async (req, res) => {
 app.get('/api/cobros', auth, async (req, res) => {
   await pool.query('ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS responsable VARCHAR(150)');
   await pool.query('ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS notas TEXT');
+  await pool.query("ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS archivos JSONB DEFAULT '[]'");
   const r = await pool.query('SELECT * FROM ct_cobros ORDER BY creado_en DESC');
   res.json(r.rows);
 });
 app.post('/api/cobros', auth, async (req, res) => {
-  const { cliente_id,cliente_nombre,concepto,total,pagado,fecha,metodo,responsable,notas } = req.body;
+  const { cliente_id,cliente_nombre,concepto,total,pagado,fecha,metodo,responsable,notas,archivos } = req.body;
   const r = await pool.query(
-    'INSERT INTO ct_cobros (cliente_id,cliente_nombre,concepto,total,pagado,fecha,metodo,responsable,notas) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
-    [cliente_id||null,cliente_nombre,concepto,total||0,pagado||0,fecha,metodo,responsable||null,notas||null]);
+    'INSERT INTO ct_cobros (cliente_id,cliente_nombre,concepto,total,pagado,fecha,metodo,responsable,notas,archivos) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',
+    [cliente_id||null,cliente_nombre,concepto,total||0,pagado||0,fecha,metodo,responsable||null,notas||null,JSON.stringify(archivos||[])]);
   res.json(r.rows[0]);
 });
 app.put('/api/cobros/:id', auth, async (req, res) => {
-  const { pagado,metodo,concepto,total,fecha,responsable,notas } = req.body;
+  const { pagado,metodo,concepto,total,fecha,responsable,notas,archivos } = req.body;
   const r = await pool.query(
-    'UPDATE ct_cobros SET pagado=$1,metodo=$2,concepto=$3,total=$4,fecha=$5,responsable=$6,notas=$7 WHERE id=$8 RETURNING *',
-    [pagado,metodo,concepto||null,total||0,fecha,responsable||null,notas||null,req.params.id]);
+    'UPDATE ct_cobros SET pagado=$1,metodo=$2,concepto=$3,total=$4,fecha=$5,responsable=$6,notas=$7,archivos=$8 WHERE id=$9 RETURNING *',
+    [pagado,metodo,concepto||null,total||0,fecha,responsable||null,notas||null,JSON.stringify(archivos||[]),req.params.id]);
   res.json(r.rows[0]);
 });
 app.delete('/api/cobros/:id', auth, async (req, res) => {
@@ -586,6 +587,7 @@ app.put('/api/sucursales/:id', auth, async (req, res) => {
 
 // ─── ENTREGAS SUCURSAL ────────────────────────────────────────────────────────
 app.get('/api/sucursales/:id/entregas', auth, async (req, res) => {
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'");
   const r = await pool.query(
     'SELECT * FROM ct_entregas_sucursal WHERE sucursal_id=$1 ORDER BY fecha ASC',
     [req.params.id]
@@ -593,18 +595,18 @@ app.get('/api/sucursales/:id/entregas', auth, async (req, res) => {
   res.json(r.rows);
 });
 app.post('/api/sucursales/:id/entregas', auth, async (req, res) => {
-  const { fecha, productos, kg_total, notas } = req.body;
+  const { fecha, productos, kg_total, notas, items } = req.body;
   const r = await pool.query(
-    'INSERT INTO ct_entregas_sucursal (sucursal_id,fecha,productos,kg_total,notas) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-    [req.params.id, fecha, productos||null, kg_total||null, notas||null]
+    'INSERT INTO ct_entregas_sucursal (sucursal_id,fecha,productos,kg_total,notas,items) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+    [req.params.id, fecha, productos||null, kg_total||null, notas||null, JSON.stringify(items||[])]
   );
   res.json(r.rows[0]);
 });
 app.put('/api/entregas-sucursal/:id', auth, async (req, res) => {
-  const { fecha, productos, kg_total, estado, notas } = req.body;
+  const { fecha, productos, kg_total, estado, notas, items } = req.body;
   const r = await pool.query(
-    'UPDATE ct_entregas_sucursal SET fecha=$1,productos=$2,kg_total=$3,estado=$4,notas=$5 WHERE id=$6 RETURNING *',
-    [fecha, productos||null, kg_total||null, estado||'programada', notas||null, req.params.id]
+    'UPDATE ct_entregas_sucursal SET fecha=$1,productos=$2,kg_total=$3,estado=$4,notas=$5,items=$6 WHERE id=$7 RETURNING *',
+    [fecha, productos||null, kg_total||null, estado||'programada', notas||null, JSON.stringify(items||[]), req.params.id]
   );
   res.json(r.rows[0]);
 });
