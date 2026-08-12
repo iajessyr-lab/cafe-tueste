@@ -445,6 +445,7 @@ app.get('/api/pedidos', auth, async (req, res) => {
   await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300)');
   await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS uso_cfdi VARCHAR(100)');
   await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS factura_emitida BOOLEAN DEFAULT FALSE');
+  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS archivado BOOLEAN DEFAULT FALSE');
   await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS rfc VARCHAR(20)');
   await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300)');
   await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS encargado VARCHAR(150)');
@@ -454,6 +455,10 @@ app.get('/api/pedidos', auth, async (req, res) => {
     LEFT JOIN ct_pedido_items pi ON pi.pedido_id=p.id
     GROUP BY p.id ORDER BY p.creado_en DESC`);
   res.json(r.rows);
+});
+app.put('/api/pedidos/:id/archivar', auth, async (req, res) => {
+  const r = await pool.query('UPDATE ct_pedidos SET archivado=$1 WHERE id=$2 RETURNING *', [req.body.archivado, req.params.id]);
+  res.json(r.rows[0]);
 });
 app.put('/api/pedidos/:id/factura', auth, async (req, res) => {
   const r = await pool.query(

@@ -764,7 +764,7 @@ const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe 
 const ACTIONS = {
   tueste: ()=>`<button class="btn btn-outline" onclick="openModal('m-import')">Importar Cropster</button><button class="btn btn-dark" onclick="abrirLote()">+ Nuevo lote</button>`,
   inventario: ()=>`<button class="btn btn-dark" onclick="abrirVerde()">+ Agregar cafe verde</button>`,
-  pedidos: ()=>`<button class="btn btn-dark" onclick="openModal('m-pedido');initPedidoForm()">+ Nuevo pedido</button>`,
+  pedidos: ()=>`<div style="display:flex;gap:8px"><button class="btn btn-outline" id="btn-archivados" onclick="toggleArchivados(this)">Ver archivados</button><button class="btn btn-dark" onclick="openModal('m-pedido');initPedidoForm()">+ Nuevo pedido</button></div>`,
   cobros: ()=>`<button class="btn btn-dark" onclick="abrirModalCobro()">+ Registrar cobro</button>`,
   clientes: ()=>`<div style="display:flex;gap:8px"><button class="btn btn-outline" onclick="abrirLunesRecordatorio()" title="Enviar seguimiento semanal por WhatsApp">📅 Seguimiento</button><button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button></div>`,
   productos: ()=>`<button class="btn btn-dark" onclick="abrirProducto()">+ Nuevo producto</button>`,
@@ -1246,10 +1246,33 @@ async function guardarPedido() {
   closeModal('m-pedido'); renderAll();
 }
 
+let verArchivados = false;
+
+function toggleArchivados(btn) {
+  verArchivados = !verArchivados;
+  btn.textContent = verArchivados ? 'Ocultar archivados' : 'Ver archivados';
+  btn.style.background = verArchivados ? '#333' : '';
+  btn.style.color = verArchivados ? '#fff' : '';
+  renderPedidos();
+}
+
+async function archivarPedido(id) {
+  const r = await api('PUT', `/api/pedidos/${id}/archivar`, {archivado: true});
+  const p = D.pedidos.find(x=>x.id===id); if(p) Object.assign(p,r);
+  renderPedidos();
+}
+
+async function desarchivarPedido(id) {
+  const r = await api('PUT', `/api/pedidos/${id}/archivar`, {archivado: false});
+  const p = D.pedidos.find(x=>x.id===id); if(p) Object.assign(p,r);
+  renderPedidos();
+}
+
 function renderPedidos() {
   const bMap={pendiente:'b-yellow',empaquetar:'b-dark',sucursal:'b-gray','en-camino':'b-gray',entregado:'b-green'};
   const lMap={pendiente:'Pendiente',empaquetar:'Por empaquetar',sucursal:'Recoge en sucursal','en-camino':'En camino',entregado:'Entregado'};
-  let lista=filtPedidos==='todos'?[...D.pedidos]:D.pedidos.filter(p=>p.estado===filtPedidos);
+  let base = verArchivados ? D.pedidos.filter(p=>p.archivado) : D.pedidos.filter(p=>!p.archivado);
+  let lista = filtPedidos==='todos' ? base : base.filter(p=>p.estado===filtPedidos);
   const el=document.getElementById('lista-pedidos');
   if(!lista.length){el.innerHTML='<div class="empty">Sin pedidos registrados.</div>';return;}
   el.innerHTML=lista.map(p=>{
@@ -1285,6 +1308,8 @@ function renderPedidos() {
           <option value="entregado"${p.estado==='entregado'?' disabled':''}>Entregado</option>
         </select>
         ${p.requiere_factura&&!p.factura_emitida?`<button class="btn btn-sm btn-sm-green" onclick="marcarFacturaEmitida(${p.id})">Factura emitida</button>`:''}
+        ${p.estado==='entregado'&&!p.archivado?`<button class="btn btn-sm" style="background:#f5f5f5;color:#888;border-color:#ddd" onclick="archivarPedido(${p.id})">Archivar</button>`:''}
+        ${p.archivado?`<button class="btn btn-sm" onclick="desarchivarPedido(${p.id})">Restaurar</button>`:''}
         <button class="btn btn-sm" onclick="abrirEditarPedido(${p.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminar('pedidos',${p.id})">Eliminar</button>
       </div>
@@ -1998,8 +2023,8 @@ async function activarSucursal(id, btn) {
 function renderCalendario(sucursalId, entregas) {
   const el = document.getElementById('sucursales-content');
   const hoy = new Date(); hoy.setHours(12,0,0,0);
-  const proximas = entregas.filter(e=>new Date(e.fecha+'T12:00:00') >= hoy).slice(0,12);
-  const pasadas  = entregas.filter(e=>new Date(e.fecha+'T12:00:00') <  hoy).reverse().slice(0,6);
+  const proximas = entregas.filter(e=>new Date(e.fecha.slice(0,10)+'T12:00:00') >= hoy).slice(0,12);
+  const pasadas  = entregas.filter(e=>new Date(e.fecha.slice(0,10)+'T12:00:00') <  hoy).reverse().slice(0,6);
   const estadoBadge = {programada:'b-yellow',entregada:'b-green',cancelada:'b-gray'};
   const estadoLabel = {programada:'Programada',entregada:'Entregada',cancelada:'Cancelada'};
 
