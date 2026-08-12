@@ -655,16 +655,20 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <div class="fl"><label>Ya pagado</label><div style="position:relative"><span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#666;font-weight:600;pointer-events:none">$</span><input id="pg-pagado" type="number" step="0.01" placeholder="0.00" oninput="calcPagoPendiente()" style="padding-left:22px"></div></div>
       <div class="fl"><label>Fecha</label><input id="pg-fecha" type="date"></div>
       <div class="fl"><label>Metodo</label>
-        <select id="pg-metodo"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option><option>Pendiente</option></select>
+        <select id="pg-metodo" onchange="toggleCamposPago()"><option>Transferencia</option><option>Efectivo</option><option>Cheque</option><option>Pendiente</option></select>
       </div>
     </div>
     <div id="pg-pendiente-info" style="margin-top:8px;font-size:.83rem;color:#c0392b;font-weight:700"></div>
+    <div id="pg-efectivo-row" class="fl" style="display:none">
+      <label>Lugar / forma de entrega (efectivo)</label>
+      <input id="pg-lugar" type="text" placeholder="ej. Oficina Rancho · entregado a encargado">
+    </div>
     <div class="fl"><label>Notas</label><input id="pg-notas" type="text" placeholder="Observaciones..."></div>
-    <div class="fl">
-      <label>Archivos adjuntos</label>
+    <div id="pg-comprobante-row" class="fl">
+      <label>Comprobante de pago</label>
       <div id="pg-archivos-lista" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
       <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:.83rem;color:#555;background:#f5f5f5;border:1px dashed #ccc;padding:6px 12px;border-radius:6px">
-        <span>📎 Adjuntar archivo</span>
+        <span>📎 Adjuntar comprobante</span>
         <input type="file" id="pg-archivo-input" multiple accept=".pdf,.jpg,.jpeg,.png,.xml" style="display:none" onchange="adjuntarArchivosPago()">
       </label>
       <div style="font-size:.72rem;color:#aaa;margin-top:4px">PDF, imagen o XML · máx 5 MB por archivo</div>
@@ -1308,6 +1312,7 @@ function renderPedidos() {
           <option value="entregado"${p.estado==='entregado'?' disabled':''}>Entregado</option>
         </select>
         ${p.requiere_factura&&!p.factura_emitida?`<button class="btn btn-sm btn-sm-green" onclick="marcarFacturaEmitida(${p.id})">Factura emitida</button>`:''}
+        ${p.requiere_factura&&p.factura_emitida?`<button class="btn btn-sm" style="background:#fde8e8;color:#c0392b;border-color:#f5c0c0" onclick="desmarcarFactura(${p.id})" title="Desmarcar factura">✕ Factura</button>`:''}
         ${p.estado==='entregado'&&!p.archivado?`<button class="btn btn-sm" style="background:#f5f5f5;color:#888;border-color:#ddd" onclick="archivarPedido(${p.id})">Archivar</button>`:''}
         ${p.archivado?`<button class="btn btn-sm" onclick="desarchivarPedido(${p.id})">Restaurar</button>`:''}
         <button class="btn btn-sm" onclick="abrirEditarPedido(${p.id})">Editar</button>
@@ -1319,6 +1324,13 @@ function renderPedidos() {
 
 async function marcarFacturaEmitida(id){
   const r=await api('PUT',`/api/pedidos/${id}/factura`,{factura_emitida:true});
+  const p=D.pedidos.find(x=>x.id===id); if(p) Object.assign(p,r);
+  renderPedidos();
+}
+
+async function desmarcarFactura(id){
+  if(!confirm('¿Quitar la marca de factura emitida?')) return;
+  const r=await api('PUT',`/api/pedidos/${id}/factura`,{factura_emitida:false});
   const p=D.pedidos.find(x=>x.id===id); if(p) Object.assign(p,r);
   renderPedidos();
 }
@@ -1841,6 +1853,7 @@ async function renderPagos() {
         <span style="color:#27ae60">Pagado: ${$m(p.pagado)}</span>
         ${pendiente>0?`<span style="color:#c0392b;font-weight:700">Debe: ${$m(pendiente)}</span>`:''}
         ${p.metodo?`<span>${p.metodo}</span>`:''}
+        ${p.lugar?`<span>📍 ${p.lugar}</span>`:''}
       </div>
       ${p.notas?`<div style="font-size:.78rem;color:#999;margin-top:4px">${p.notas}</div>`:''}
       ${p.archivos&&p.archivos.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">${p.archivos.map(a=>`<a href="${a.data}" download="${a.nombre}" style="display:inline-flex;align-items:center;gap:4px;background:#f0f0f0;border-radius:4px;padding:3px 8px;font-size:.75rem;color:#333;text-decoration:none">📄 ${a.nombre}</a>`).join('')}</div>`:'' }
@@ -1892,6 +1905,11 @@ function renderArchivosPago(){
     </div>`).join('');
 }
 
+function toggleCamposPago() {
+  const m = document.getElementById('pg-metodo').value;
+  document.getElementById('pg-efectivo-row').style.display = m==='Efectivo' ? '' : 'none';
+}
+
 function abrirPago(id){
   _editPagoId=id||null;
   const p=id?D_pagos.find(x=>x.id===id):null;
@@ -1903,9 +1921,12 @@ function abrirPago(id){
   document.getElementById('pg-monto').value=p?.monto ? parseFloat(p.monto).toFixed(2) : '';
   document.getElementById('pg-pagado').value=p?.pagado ? parseFloat(p.pagado).toFixed(2) : '';
   document.getElementById('pg-fecha').value=p?.fecha?p.fecha.slice(0,10):hoy();
+  document.getElementById('pg-metodo').value=p?.metodo||'Transferencia';
+  document.getElementById('pg-lugar').value=p?.lugar||'';
   document.getElementById('pg-notas').value=p?.notas||'';
   document.getElementById('m-pago-btn').textContent=p?'Guardar cambios':'Guardar';
   document.getElementById('pg-pendiente-info').textContent='';
+  toggleCamposPago();
   renderArchivosPago();
   openModal('m-pago');
 }
@@ -1927,6 +1948,7 @@ async function guardarPago(){
     pagado:document.getElementById('pg-pagado').value||0,
     fecha:document.getElementById('pg-fecha').value||hoy(),
     metodo:document.getElementById('pg-metodo').value,
+    lugar:document.getElementById('pg-lugar').value.trim(),
     notas:document.getElementById('pg-notas').value.trim(),
     archivos:_pagoArchivos
   };
