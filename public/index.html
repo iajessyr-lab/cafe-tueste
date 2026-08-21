@@ -207,6 +207,10 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         Productos
       </button>
+      <button class="s-btn" onclick="go('costos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Costos
+      </button>
       <button class="s-btn" onclick="go('pagos')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Pagos
@@ -325,6 +329,11 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
           </select>
         </div>
         <div class="lista" id="lista-productos"></div>
+      </div>
+
+      <!-- COSTOS -->
+      <div class="sec" id="sec-costos">
+        <div class="lista" id="lista-costos"></div>
       </div>
 
       <!-- PAGOS -->
@@ -642,6 +651,57 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
 </div></div>
 
+<!-- MODAL FICHA DE COSTOS -->
+<div class="overlay" id="m-costo"><div class="modal" style="max-width:700px">
+  <div class="modal-head"><h3 id="m-costo-titulo">Nueva ficha de costos</h3><button class="modal-close" onclick="closeModal('m-costo')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="fg" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="fl"><label>Nombre del grano</label><input id="co-nombre" type="text" placeholder="ej. Castelan Lavado"></div>
+      <div class="fl"><label>Origen</label><input id="co-origen" type="text" placeholder="ej. Veracruz, Mexico"></div>
+      <div class="fl"><label>Tipo de grano</label><input id="co-tipo" type="text" placeholder="ej. Lavado"></div>
+    </div>
+    <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Compra de café verde</div>
+      <div class="fg" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="fl"><label>Kg comprados</label><input id="co-kg" type="number" step="0.01" placeholder="1035" oninput="recalcCosto()"></div>
+        <div class="fl"><label>Costo total de compra ($)</label><input id="co-costo-total" type="number" step="0.01" placeholder="196650" oninput="recalcCosto()"></div>
+        <div class="fl"><label>Merma (%)</label><input id="co-merma" type="number" step="0.1" value="13" oninput="recalcCosto()"></div>
+      </div>
+      <div id="co-info-verde" style="display:flex;gap:16px;flex-wrap:wrap;font-size:.78rem;color:#555;margin-top:6px;padding:8px 10px;background:#fff;border-radius:7px;border:1px solid #eee"></div>
+    </div>
+    <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Mano de obra</div>
+      <div class="fg" style="grid-template-columns:1fr 1fr">
+        <div class="fl"><label>Costo mensual MO ($)</label><input id="co-mo-mes" type="number" step="0.01" placeholder="0" oninput="recalcCosto()"></div>
+        <div class="fl"><label>Producción mensual (kg tostado)</label><input id="co-mo-prod" type="number" step="0.1" placeholder="ej. 100" oninput="recalcCosto()"></div>
+      </div>
+      <div id="co-mo-info" style="font-size:.78rem;color:#555;margin-top:4px"></div>
+    </div>
+    <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Formatos y empaques</div>
+      <div id="co-empaques-lista"></div>
+      <button class="btn btn-outline" style="width:100%;margin-top:6px;font-size:.82rem" onclick="addEmpaque()">+ Agregar formato</button>
+    </div>
+    <div id="co-preview" style="display:none">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Vista previa de costos</div>
+      <div style="overflow-x:auto">
+        <table id="co-tabla-preview" style="width:100%;border-collapse:collapse;font-size:.78rem"></table>
+      </div>
+    </div>
+    <div class="fl" style="margin-top:12px"><label>Notas</label><input id="co-notas" type="text" placeholder="Observaciones..."></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-costo')">Cancelar</button>
+    <button class="btn btn-dark" id="m-costo-btn" onclick="guardarFicha()">Guardar ficha</button>
+  </div>
+</div></div>
+
+<!-- MODAL FICHA TÉCNICA (vista completa) -->
+<div class="overlay" id="m-ficha-tecnica"><div class="modal" style="max-width:820px">
+  <div class="modal-head"><h3 id="m-ft-titulo">Ficha de costos</h3><button class="modal-close" onclick="closeModal('m-ficha-tecnica')">&#x2715;</button></div>
+  <div class="modal-body" id="m-ft-body"></div>
+</div></div>
+
 <div class="overlay" id="m-pago"><div class="modal">
   <div class="modal-head"><h3 id="m-pago-titulo">Nuevo pago</h3><button class="modal-close" onclick="closeModal('m-pago')">&#x2715;</button></div>
   <div class="modal-body">
@@ -764,7 +824,7 @@ function logout() {
 }
 
 // ─── NAVEGACION ────────────────────────────────────────────────────────────────
-const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe Verde',pedidos:'Pedidos',cobros:'Cobros',clientes:'Clientes',productos:'Productos',pagos:'Pagos a Proveedores',sucursales:'Sucursales',usuarios:'Usuarios'};
+const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe Verde',pedidos:'Pedidos',cobros:'Cobros',clientes:'Clientes',productos:'Productos',costos:'Costos de Producción',pagos:'Pagos a Proveedores',sucursales:'Sucursales',usuarios:'Usuarios'};
 const ACTIONS = {
   tueste: ()=>`<button class="btn btn-outline" onclick="openModal('m-import')">Importar Cropster</button><button class="btn btn-dark" onclick="abrirLote()">+ Nuevo lote</button>`,
   inventario: ()=>`<button class="btn btn-dark" onclick="abrirVerde()">+ Agregar cafe verde</button>`,
@@ -772,6 +832,7 @@ const ACTIONS = {
   cobros: ()=>`<button class="btn btn-dark" onclick="abrirModalCobro()">+ Registrar cobro</button>`,
   clientes: ()=>`<div style="display:flex;gap:8px"><button class="btn btn-outline" onclick="abrirLunesRecordatorio()" title="Enviar seguimiento semanal por WhatsApp">📅 Seguimiento</button><button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button></div>`,
   productos: ()=>`<button class="btn btn-dark" onclick="abrirProducto()">+ Nuevo producto</button>`,
+  costos: ()=>`<button class="btn btn-dark" onclick="abrirFicha()">+ Nueva ficha</button>`,
   pagos: ()=>`<button class="btn btn-dark" onclick="abrirPago()">+ Nuevo pago</button>`,
   sucursales: ()=>`<button class="btn btn-dark" onclick="resetEntregaForm();openModal('m-entrega')">+ Nueva entrega</button>`,
   usuarios: ()=>`<button class="btn btn-dark" onclick="openModal('m-usuario')">+ Crear usuario</button>`,
@@ -781,9 +842,10 @@ function go(s) {
   document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.s-btn').forEach(e=>e.classList.remove('on'));
   document.getElementById('sec-'+s).classList.add('on');
-  document.querySelectorAll('.s-btn')[['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','pagos','sucursales','usuarios'].indexOf(s)].classList.add('on');
+  document.querySelectorAll('.s-btn')[['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','costos','pagos','sucursales','usuarios'].indexOf(s)].classList.add('on');
   if(s==='sucursales') renderSucursales();
   if(s==='pagos') renderPagos();
+  if(s==='costos') renderCostos();
   document.getElementById('topbar-title').textContent = TITLES[s]||s;
   document.getElementById('topbar-actions').innerHTML = ACTIONS[s]?ACTIONS[s]():'';
   if (s==='dashboard') renderDashboard();
@@ -1812,6 +1874,287 @@ async function eliminar(tabla,id){
   await api('DELETE',url+id);
   D[key]=D[key].filter(x=>x.id!==id);
   renderAll();
+}
+
+// ─── COSTOS ─────────────────────────────────────────────────────────────────────
+let D_fichas = [];
+let _editFichaId = null;
+
+const FORMATOS_DEFAULT = [
+  {nombre:'100g', gramos:100, bolsa:1.80, sticker:0.90},
+  {nombre:'250g', gramos:250, bolsa:3.20, sticker:0.90},
+  {nombre:'500g', gramos:500, bolsa:5.50, sticker:0.90},
+  {nombre:'1kg',  gramos:1000, bolsa:8.00, sticker:0.90},
+];
+
+function calcCostos(ficha) {
+  const kg = parseFloat(ficha.kg_comprados)||0;
+  const costoTotal = parseFloat(ficha.costo_total)||0;
+  const merma = parseFloat(ficha.merma)||13;
+  const moMes = parseFloat(ficha.mo_mensual)||0;
+  const moProd = parseFloat(ficha.mo_produccion)||100;
+
+  const costoGramoVerde = kg > 0 ? costoTotal / (kg * 1000) : 0;
+  const rendimiento = 100 - merma;
+  const gramos100g = 100 / (rendimiento / 100);
+  const costo100g = costoGramoVerde * gramos100g;
+  const mo100g = moProd > 0 ? (moMes / (moProd * 1000)) * 100 : 0;
+
+  const empaques = (ficha.empaques || []).map(e => {
+    const costoGramos = (e.gramos / 100) * costo100g;
+    const costoEmpaque = parseFloat(e.bolsa||0) + parseFloat(e.sticker||0);
+    const costoMO = (e.gramos / 100) * mo100g;
+    const costoUnitario = costoGramos + costoEmpaque + costoMO;
+    return {...e, costoGramos, costoEmpaque, costoMO, costoUnitario};
+  });
+
+  return {costoGramoVerde, rendimiento, gramos100g, costo100g, mo100g, empaques};
+}
+
+function recalcCosto() {
+  const ficha = getFichaFormData();
+  const r = calcCostos(ficha);
+
+  const infoVerde = document.getElementById('co-info-verde');
+  if(infoVerde) {
+    if(ficha.kg_comprados && ficha.costo_total) {
+      infoVerde.innerHTML = `
+        <span><b>Costo/gramo verde:</b> ${$m(r.costoGramoVerde)}</span>
+        <span><b>Rendimiento:</b> ${r.rendimiento.toFixed(1)}%</span>
+        <span><b>Gramos verdes por 100g tostado:</b> ${r.gramos100g.toFixed(1)}g</span>
+        <span><b>Costo 100g tostado:</b> ${$m(r.costo100g)}</span>
+      `;
+    } else {
+      infoVerde.innerHTML = '';
+    }
+  }
+
+  const moInfo = document.getElementById('co-mo-info');
+  if(moInfo) moInfo.textContent = r.mo100g > 0 ? `MO por 100g tostado: ${$m(r.mo100g)}` : '';
+
+  const preview = document.getElementById('co-preview');
+  const tabla = document.getElementById('co-tabla-preview');
+  if(r.empaques.length > 0 && ficha.kg_comprados && ficha.costo_total) {
+    preview.style.display = '';
+    tabla.innerHTML = `
+      <tr style="background:#f5f5f5;font-weight:600">
+        <th style="padding:6px 8px;text-align:left">Formato</th>
+        <th style="padding:6px 8px;text-align:right">Costo granos</th>
+        <th style="padding:6px 8px;text-align:right">Empaque</th>
+        <th style="padding:6px 8px;text-align:right">MO</th>
+        <th style="padding:6px 8px;text-align:right;background:#fffbe6">Total unitario</th>
+      </tr>
+      ${r.empaques.map(e=>`<tr style="border-top:1px solid #f0f0f0">
+        <td style="padding:6px 8px">${e.nombre}</td>
+        <td style="padding:6px 8px;text-align:right">${$m(e.costoGramos)}</td>
+        <td style="padding:6px 8px;text-align:right">${$m(e.costoEmpaque)}</td>
+        <td style="padding:6px 8px;text-align:right">${$m(e.costoMO)}</td>
+        <td style="padding:6px 8px;text-align:right;font-weight:600;background:#fffbe6">${$m(e.costoUnitario)}</td>
+      </tr>`).join('')}
+    `;
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+function addEmpaque(nombre='', gramos='', bolsa='', sticker='') {
+  const eid = 'emp-'+Date.now()+Math.random().toString(36).slice(2,5);
+  const lista = document.getElementById('co-empaques-lista');
+  const div = document.createElement('div');
+  div.id = eid;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 80px 80px auto;gap:6px;align-items:end;margin-bottom:8px';
+  div.innerHTML = `
+    <div class="fl"><label style="font-size:.72rem">Formato</label><input type="text" placeholder="ej. 250g" value="${nombre}" oninput="recalcCosto()"></div>
+    <div class="fl"><label style="font-size:.72rem">Gramos</label><input type="number" placeholder="250" value="${gramos}" oninput="recalcCosto()"></div>
+    <div class="fl"><label style="font-size:.72rem">Bolsa ($)</label><input type="number" step="0.01" placeholder="3.20" value="${bolsa}" oninput="recalcCosto()"></div>
+    <div class="fl"><label style="font-size:.72rem">Sticker ($)</label><input type="number" step="0.01" placeholder="0.90" value="${sticker}" oninput="recalcCosto()"></div>
+    <button onclick="document.getElementById('${eid}').remove();recalcCosto()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#aaa;padding:0 4px;margin-bottom:2px">✕</button>
+  `;
+  lista.appendChild(div);
+  recalcCosto();
+}
+
+function getEmpaques() {
+  return Array.from(document.querySelectorAll('#co-empaques-lista > div[id]')).map(div=>{
+    const inputs = div.querySelectorAll('input');
+    return {
+      nombre: inputs[0]?.value||'',
+      gramos: parseFloat(inputs[1]?.value)||0,
+      bolsa: parseFloat(inputs[2]?.value)||0,
+      sticker: parseFloat(inputs[3]?.value)||0,
+    };
+  }).filter(e=>e.nombre);
+}
+
+function getFichaFormData() {
+  return {
+    nombre: document.getElementById('co-nombre')?.value||'',
+    origen: document.getElementById('co-origen')?.value||'',
+    tipo: document.getElementById('co-tipo')?.value||'',
+    kg_comprados: document.getElementById('co-kg')?.value||'',
+    costo_total: document.getElementById('co-costo-total')?.value||'',
+    merma: document.getElementById('co-merma')?.value||13,
+    mo_mensual: document.getElementById('co-mo-mes')?.value||0,
+    mo_produccion: document.getElementById('co-mo-prod')?.value||100,
+    notas: document.getElementById('co-notas')?.value||'',
+    empaques: getEmpaques(),
+  };
+}
+
+function abrirFicha(id) {
+  _editFichaId = id||null;
+  document.getElementById('m-costo-titulo').textContent = id ? 'Editar ficha' : 'Nueva ficha de costos';
+  document.getElementById('m-costo-btn').textContent = id ? 'Guardar cambios' : 'Guardar ficha';
+  document.getElementById('co-empaques-lista').innerHTML = '';
+  document.getElementById('co-info-verde').innerHTML = '';
+  document.getElementById('co-mo-info').textContent = '';
+  document.getElementById('co-preview').style.display = 'none';
+
+  if(id) {
+    const f = D_fichas.find(x=>x.id===id);
+    if(!f) return;
+    document.getElementById('co-nombre').value = f.nombre||'';
+    document.getElementById('co-origen').value = f.origen||'';
+    document.getElementById('co-tipo').value = f.tipo||'';
+    document.getElementById('co-kg').value = f.kg_comprados||'';
+    document.getElementById('co-costo-total').value = f.costo_total||'';
+    document.getElementById('co-merma').value = f.merma||13;
+    document.getElementById('co-mo-mes').value = f.mo_mensual||'';
+    document.getElementById('co-mo-prod').value = f.mo_produccion||'';
+    document.getElementById('co-notas').value = f.notas||'';
+    (f.empaques||[]).forEach(e=>addEmpaque(e.nombre, e.gramos, e.bolsa, e.sticker));
+  } else {
+    document.getElementById('co-nombre').value = '';
+    document.getElementById('co-origen').value = '';
+    document.getElementById('co-tipo').value = '';
+    document.getElementById('co-kg').value = '';
+    document.getElementById('co-costo-total').value = '';
+    document.getElementById('co-merma').value = 13;
+    document.getElementById('co-mo-mes').value = '';
+    document.getElementById('co-mo-prod').value = '';
+    document.getElementById('co-notas').value = '';
+    FORMATOS_DEFAULT.forEach(f=>addEmpaque(f.nombre, f.gramos, f.bolsa, f.sticker));
+  }
+  openModal('m-costo');
+}
+
+async function guardarFicha() {
+  const data = getFichaFormData();
+  if(!data.nombre) return alert('Ingresa el nombre del grano');
+  let r;
+  if(_editFichaId) {
+    r = await api('PUT', `/api/fichas/${_editFichaId}`, data);
+    const idx = D_fichas.findIndex(x=>x.id===_editFichaId);
+    if(idx>=0) D_fichas[idx] = r;
+  } else {
+    r = await api('POST', '/api/fichas', data);
+    D_fichas.push(r);
+  }
+  closeModal('m-costo');
+  renderCostos();
+}
+
+async function eliminarFicha(id) {
+  if(!confirm('¿Eliminar esta ficha?')) return;
+  await api('DELETE', `/api/fichas/${id}`);
+  D_fichas = D_fichas.filter(x=>x.id!==id);
+  renderCostos();
+}
+
+function verFichaTecnica(id) {
+  const f = D_fichas.find(x=>x.id===id);
+  if(!f) return;
+  const r = calcCostos(f);
+  document.getElementById('m-ft-titulo').textContent = f.nombre + (f.origen ? ` · ${f.origen}` : '');
+  document.getElementById('m-ft-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:#f9f9f9;border-radius:10px;padding:14px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Datos del grano</div>
+        <div style="font-size:.85rem;line-height:1.9">
+          <div><b>Origen:</b> ${f.origen||'-'}</div>
+          <div><b>Tipo:</b> ${f.tipo||'-'}</div>
+          <div><b>Kg comprados:</b> ${f.kg_comprados||'-'}</div>
+        </div>
+      </div>
+      <div style="background:#f9f9f9;border-radius:10px;padding:14px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Costo verde</div>
+        <div style="font-size:.85rem;line-height:1.9">
+          <div><b>Costo total:</b> ${$m(f.costo_total)}</div>
+          <div><b>Costo/gramo verde:</b> ${$m(r.costoGramoVerde)}</div>
+          <div><b>Merma:</b> ${f.merma||13}%</div>
+        </div>
+      </div>
+      <div style="background:#f9f9f9;border-radius:10px;padding:14px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Tostado</div>
+        <div style="font-size:.85rem;line-height:1.9">
+          <div><b>Rendimiento:</b> ${r.rendimiento.toFixed(1)}%</div>
+          <div><b>Gramos verdes/100g:</b> ${r.gramos100g.toFixed(1)}g</div>
+          <div><b>Costo 100g tostado:</b> ${$m(r.costo100g)}</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Tabla de costos por formato</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+        <thead>
+          <tr style="background:#f5f5f5">
+            <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #eee">Formato</th>
+            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Gramos</th>
+            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Costo granos</th>
+            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Bolsa</th>
+            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Sticker</th>
+            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">MO</th>
+            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee;background:#fffbe6">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${r.empaques.map(e=>`<tr style="border-bottom:1px solid #f5f5f5">
+            <td style="padding:8px 12px;font-weight:600">${e.nombre}</td>
+            <td style="padding:8px 12px;text-align:right;color:#777">${e.gramos}g</td>
+            <td style="padding:8px 12px;text-align:right">${$m(e.costoGramos)}</td>
+            <td style="padding:8px 12px;text-align:right">${$m(e.bolsa)}</td>
+            <td style="padding:8px 12px;text-align:right">${$m(e.sticker)}</td>
+            <td style="padding:8px 12px;text-align:right">${$m(e.costoMO)}</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:700;background:#fffbe6">${$m(e.costoUnitario)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    ${f.notas ? `<div style="margin-top:16px;font-size:.82rem;color:#666"><b>Notas:</b> ${f.notas}</div>` : ''}
+  `;
+  openModal('m-ficha-tecnica');
+}
+
+async function renderCostos() {
+  if(!D_fichas.length) {
+    try { D_fichas = await api('GET','/api/fichas'); } catch(e) { D_fichas = []; }
+  }
+  const lista = document.getElementById('lista-costos');
+  if(!lista) return;
+  if(!D_fichas.length) {
+    lista.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#aaa">No hay fichas de costos. Crea una con el botón + Nueva ficha.</div>`;
+    return;
+  }
+  lista.innerHTML = D_fichas.map(f => {
+    const r = calcCostos(f);
+    const min = r.empaques.length ? Math.min(...r.empaques.map(e=>e.costoUnitario)) : null;
+    const max = r.empaques.length ? Math.max(...r.empaques.map(e=>e.costoUnitario)) : null;
+    return `<div class="item" style="cursor:default">
+      <div class="item-info" onclick="verFichaTecnica(${f.id})" style="cursor:pointer;flex:1">
+        <div class="item-title">${f.nombre}</div>
+        <div class="item-sub">${[f.origen,f.tipo].filter(Boolean).join(' · ')}${f.kg_comprados ? ` · ${f.kg_comprados}kg` : ''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        ${min !== null ? `<div style="text-align:right">
+          <div style="font-size:.75rem;color:#aaa">Rango de costo</div>
+          <div style="font-size:.95rem;font-weight:600">${$m(min)} – ${$m(max)}</div>
+        </div>` : ''}
+        <button class="btn btn-sm btn-outline" onclick="verFichaTecnica(${f.id})">Ver ficha</button>
+        <button class="btn btn-sm btn-outline" onclick="abrirFicha(${f.id})">Editar</button>
+        <button class="btn btn-sm" style="background:#fde8e8;color:#c0392b;border-color:#f5c0c0" onclick="eliminarFicha(${f.id})">Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ─── PAGOS ─────────────────────────────────────────────────────────────────────

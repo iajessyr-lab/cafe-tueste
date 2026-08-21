@@ -621,6 +621,46 @@ app.delete('/api/entregas-sucursal/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── FICHAS DE COSTO ─────────────────────────────────────────────────────────
+app.get('/api/fichas', auth, async (req, res) => {
+  await pool.query(`CREATE TABLE IF NOT EXISTS ct_fichas_costo (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(200) NOT NULL,
+    origen VARCHAR(200),
+    tipo VARCHAR(200),
+    kg_comprados NUMERIC,
+    costo_total NUMERIC,
+    merma NUMERIC DEFAULT 13,
+    mo_mensual NUMERIC DEFAULT 0,
+    mo_produccion NUMERIC DEFAULT 100,
+    empaques JSONB DEFAULT '[]',
+    notas TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  const r = await pool.query('SELECT * FROM ct_fichas_costo ORDER BY created_at DESC');
+  res.json(r.rows);
+});
+app.post('/api/fichas', auth, async (req, res) => {
+  const { nombre, origen, tipo, kg_comprados, costo_total, merma, mo_mensual, mo_produccion, empaques, notas } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_fichas_costo (nombre,origen,tipo,kg_comprados,costo_total,merma,mo_mensual,mo_produccion,empaques,notas) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',
+    [nombre, origen||null, tipo||null, kg_comprados||null, costo_total||null, merma||13, mo_mensual||0, mo_produccion||100, JSON.stringify(empaques||[]), notas||null]
+  );
+  res.json(r.rows[0]);
+});
+app.put('/api/fichas/:id', auth, async (req, res) => {
+  const { nombre, origen, tipo, kg_comprados, costo_total, merma, mo_mensual, mo_produccion, empaques, notas } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_fichas_costo SET nombre=$1,origen=$2,tipo=$3,kg_comprados=$4,costo_total=$5,merma=$6,mo_mensual=$7,mo_produccion=$8,empaques=$9,notas=$10 WHERE id=$11 RETURNING *',
+    [nombre, origen||null, tipo||null, kg_comprados||null, costo_total||null, merma||13, mo_mensual||0, mo_produccion||100, JSON.stringify(empaques||[]), notas||null, req.params.id]
+  );
+  res.json(r.rows[0]);
+});
+app.delete('/api/fichas/:id', auth, async (req, res) => {
+  await pool.query('DELETE FROM ct_fichas_costo WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
 app.use((err,req,res,next) => { console.error(err); res.status(500).json({ error: 'Error interno' }); });
 
 initDB().then(() => app.listen(PORT, () => console.log(`Puerto ${PORT}`))).catch(e => { console.error(e); process.exit(1); });
