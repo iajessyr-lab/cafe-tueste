@@ -621,6 +621,40 @@ app.delete('/api/entregas-sucursal/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── GASTOS FIJOS ────────────────────────────────────────────────────────────
+app.get('/api/gastos-fijos', auth, async (req, res) => {
+  await pool.query(`CREATE TABLE IF NOT EXISTS ct_gastos_fijos (
+    id SERIAL PRIMARY KEY,
+    mes VARCHAR(7) NOT NULL,
+    produccion_kg NUMERIC DEFAULT 0,
+    sueldos JSONB DEFAULT '[]',
+    otros_gastos JSONB DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  const r = await pool.query('SELECT * FROM ct_gastos_fijos ORDER BY mes DESC');
+  res.json(r.rows);
+});
+app.post('/api/gastos-fijos', auth, async (req, res) => {
+  const { mes, produccion_kg, sueldos, otros_gastos } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_gastos_fijos (mes,produccion_kg,sueldos,otros_gastos) VALUES ($1,$2,$3,$4) RETURNING *',
+    [mes, produccion_kg||0, JSON.stringify(sueldos||[]), JSON.stringify(otros_gastos||[])]
+  );
+  res.json(r.rows[0]);
+});
+app.put('/api/gastos-fijos/:id', auth, async (req, res) => {
+  const { mes, produccion_kg, sueldos, otros_gastos } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_gastos_fijos SET mes=$1,produccion_kg=$2,sueldos=$3,otros_gastos=$4 WHERE id=$5 RETURNING *',
+    [mes, produccion_kg||0, JSON.stringify(sueldos||[]), JSON.stringify(otros_gastos||[]), req.params.id]
+  );
+  res.json(r.rows[0]);
+});
+app.delete('/api/gastos-fijos/:id', auth, async (req, res) => {
+  await pool.query('DELETE FROM ct_gastos_fijos WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
 // ─── FICHAS DE COSTO ─────────────────────────────────────────────────────────
 app.get('/api/fichas', auth, async (req, res) => {
   await pool.query(`CREATE TABLE IF NOT EXISTS ct_fichas_costo (

@@ -333,6 +333,27 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 
       <!-- COSTOS -->
       <div class="sec" id="sec-costos">
+        <!-- Banner gastos fijos del mes -->
+        <div id="costos-gf-banner" style="margin-bottom:16px;display:none">
+          <div style="background:#fffbe6;border:1px solid #fde68a;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#92400e;margin-bottom:4px">Gastos Fijos — <span id="gf-banner-mes"></span></div>
+              <div style="font-size:.82rem;color:#555" id="gf-banner-detalle"></div>
+            </div>
+            <div style="display:flex;gap:24px">
+              <div style="text-align:center"><div style="font-size:.65rem;color:#92400e;font-weight:600;text-transform:uppercase">Total</div><div style="font-size:1rem;font-weight:700" id="gf-banner-total"></div></div>
+              <div style="text-align:center"><div style="font-size:.65rem;color:#92400e;font-weight:600;text-transform:uppercase">Producción</div><div style="font-size:1rem;font-weight:700" id="gf-banner-prod"></div></div>
+              <div style="text-align:center;background:#fff;border-radius:8px;padding:6px 12px"><div style="font-size:.65rem;color:#92400e;font-weight:600;text-transform:uppercase">Costo fijo / 100g</div><div style="font-size:1.2rem;font-weight:800;color:#d97706" id="gf-banner-100g"></div></div>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="abrirGastosFijos(currentGF?.id)">Editar</button>
+          </div>
+        </div>
+        <div id="costos-gf-empty" style="margin-bottom:16px;display:none">
+          <div style="background:#f9f9f9;border-radius:12px;padding:20px;text-align:center;color:#aaa;font-size:.88rem">
+            Sin gastos fijos configurados para este mes.
+            <button class="btn btn-sm btn-dark" style="margin-left:12px" onclick="abrirGastosFijos()">Configurar</button>
+          </div>
+        </div>
         <div class="lista" id="lista-costos"></div>
       </div>
 
@@ -651,6 +672,47 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
 </div></div>
 
+<!-- MODAL GASTOS FIJOS DEL MES -->
+<div class="overlay" id="m-gastos"><div class="modal" style="max-width:720px">
+  <div class="modal-head"><h3 id="m-gastos-titulo">Gastos Fijos del Mes</h3><button class="modal-close" onclick="closeModal('m-gastos')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="fg" style="grid-template-columns:1fr 1fr;margin-bottom:16px">
+      <div class="fl"><label>Mes</label><input id="gf-mes" type="month"></div>
+      <div class="fl"><label>Producción mensual (kg tostado)</label><input id="gf-prod-kg" type="number" step="0.1" placeholder="688" oninput="recalcGastos()"></div>
+    </div>
+
+    <!-- SUELDOS -->
+    <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Sueldos mensuales</div>
+      <div style="display:grid;grid-template-columns:2fr 80px 70px 90px 80px 80px 24px;gap:6px;font-size:.7rem;font-weight:600;color:#999;padding:0 4px;margin-bottom:4px">
+        <span>Puesto</span><span>$/día</span><span>Días/sem</span><span>Bono gasolina</span><span>Sem/mes</span><span>Mensual</span><span></span>
+      </div>
+      <div id="gf-sueldos-lista"></div>
+      <button class="btn btn-outline" style="width:100%;margin-top:6px;font-size:.8rem" onclick="addSueldo()">+ Agregar puesto</button>
+      <div style="text-align:right;margin-top:8px;font-size:.85rem"><b>Total sueldos: <span id="gf-total-sueldos" style="color:#1a1a1a">$0.00</span></b></div>
+    </div>
+
+    <!-- OTROS GASTOS FIJOS -->
+    <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Otros gastos fijos</div>
+      <div id="gf-gastos-lista"></div>
+      <button class="btn btn-outline" style="width:100%;margin-top:6px;font-size:.8rem" onclick="addGastoFijo()">+ Agregar gasto</button>
+    </div>
+
+    <!-- RESUMEN CALCULADO -->
+    <div id="gf-resumen" style="background:#fffbe6;border:1px solid #fde68a;border-radius:10px;padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+      <div style="text-align:center"><div style="font-size:.7rem;color:#92400e;font-weight:600;text-transform:uppercase">Total gastos fijos</div><div id="gf-r-total" style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin-top:4px">-</div></div>
+      <div style="text-align:center"><div style="font-size:.7rem;color:#92400e;font-weight:600;text-transform:uppercase">Producción</div><div id="gf-r-prod" style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin-top:4px">-</div></div>
+      <div style="text-align:center"><div style="font-size:.7rem;color:#92400e;font-weight:600;text-transform:uppercase">Costo fijo / kg</div><div id="gf-r-kg" style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin-top:4px">-</div></div>
+      <div style="text-align:center;background:#fff;border-radius:8px;padding:6px"><div style="font-size:.7rem;color:#92400e;font-weight:600;text-transform:uppercase">Costo fijo / 100g</div><div id="gf-r-100g" style="font-size:1.3rem;font-weight:800;color:#d97706;margin-top:4px">-</div></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-gastos')">Cancelar</button>
+    <button class="btn btn-dark" onclick="guardarGastosFijos()">Guardar</button>
+  </div>
+</div></div>
+
 <!-- MODAL FICHA DE COSTOS -->
 <div class="overlay" id="m-costo"><div class="modal" style="max-width:700px">
   <div class="modal-head"><h3 id="m-costo-titulo">Nueva ficha de costos</h3><button class="modal-close" onclick="closeModal('m-costo')">&#x2715;</button></div>
@@ -669,14 +731,7 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       </div>
       <div id="co-info-verde" style="display:flex;gap:16px;flex-wrap:wrap;font-size:.78rem;color:#555;margin-top:6px;padding:8px 10px;background:#fff;border-radius:7px;border:1px solid #eee"></div>
     </div>
-    <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:12px">
-      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Mano de obra</div>
-      <div class="fg" style="grid-template-columns:1fr 1fr">
-        <div class="fl"><label>Costo mensual MO ($)</label><input id="co-mo-mes" type="number" step="0.01" placeholder="0" oninput="recalcCosto()"></div>
-        <div class="fl"><label>Producción mensual (kg tostado)</label><input id="co-mo-prod" type="number" step="0.1" placeholder="ej. 100" oninput="recalcCosto()"></div>
-      </div>
-      <div id="co-mo-info" style="font-size:.78rem;color:#555;margin-top:4px"></div>
-    </div>
+    <div id="co-gf-badge" style="background:#fffbe6;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:.82rem;color:#92400e"></div>
     <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:12px">
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Formatos y empaques</div>
       <div id="co-empaques-lista"></div>
@@ -1878,7 +1933,10 @@ async function eliminar(tabla,id){
 
 // ─── COSTOS ─────────────────────────────────────────────────────────────────────
 let D_fichas = [];
+let D_gastos_fijos = [];
+let currentGF = null;
 let _editFichaId = null;
+let _editGFId = null;
 
 const FORMATOS_DEFAULT = [
   {nombre:'100g', gramos:100, bolsa:1.80, sticker:0.90},
@@ -1887,50 +1945,197 @@ const FORMATOS_DEFAULT = [
   {nombre:'1kg',  gramos:1000, bolsa:8.00, sticker:0.90},
 ];
 
-function calcCostos(ficha) {
+// ── Cálculo costo fijo/100g desde un objeto de gastos fijos
+function calcGF(gf) {
+  const sueldos = (gf.sueldos||[]);
+  const totalSueldos = sueldos.reduce((a,s)=>{
+    const semanal = (parseFloat(s.pago_dia)||0)*(parseFloat(s.dias_semana)||0)+(parseFloat(s.bono_gasolina)||0);
+    return a + semanal*(parseFloat(s.semanas_mes)||4);
+  }, 0);
+  const otrosGastos = (gf.otros_gastos||[]);
+  const totalOtros = otrosGastos.reduce((a,g)=>a+(parseFloat(g.monto)||0), 0);
+  const totalGastos = totalSueldos + totalOtros;
+  const prodKg = parseFloat(gf.produccion_kg)||0;
+  const costoKg = prodKg > 0 ? totalGastos / prodKg : 0;
+  const costo100g = prodKg > 0 ? totalGastos / (prodKg * 1000) * 100 : 0;
+  return {totalSueldos, totalOtros, totalGastos, prodKg, costoKg, costo100g};
+}
+
+// ── Cálculo costo de grano (usa costo_fijo_100g de gastos fijos)
+function calcCostos(ficha, costo_fijo_100g=0) {
   const kg = parseFloat(ficha.kg_comprados)||0;
   const costoTotal = parseFloat(ficha.costo_total)||0;
   const merma = parseFloat(ficha.merma)||13;
-  const moMes = parseFloat(ficha.mo_mensual)||0;
-  const moProd = parseFloat(ficha.mo_produccion)||100;
-
   const costoGramoVerde = kg > 0 ? costoTotal / (kg * 1000) : 0;
   const rendimiento = 100 - merma;
   const gramos100g = 100 / (rendimiento / 100);
   const costo100g = costoGramoVerde * gramos100g;
-  const mo100g = moProd > 0 ? (moMes / (moProd * 1000)) * 100 : 0;
-
-  const empaques = (ficha.empaques || []).map(e => {
-    const costoGramos = (e.gramos / 100) * costo100g;
+  const empaques = (ficha.empaques||[]).map(e => {
+    const costoGranos = (e.gramos / 100) * costo100g;
     const costoEmpaque = parseFloat(e.bolsa||0) + parseFloat(e.sticker||0);
-    const costoMO = (e.gramos / 100) * mo100g;
-    const costoUnitario = costoGramos + costoEmpaque + costoMO;
-    return {...e, costoGramos, costoEmpaque, costoMO, costoUnitario};
+    const costoFijo = (e.gramos / 100) * costo_fijo_100g;
+    const costoUnitario = costoGranos + costoEmpaque + costoFijo;
+    return {...e, costoGranos, costoEmpaque, costoFijo, costoUnitario};
+  });
+  return {costoGramoVerde, rendimiento, gramos100g, costo100g, empaques};
+}
+
+// ── Gastos fijos: añadir fila de sueldo
+function addSueldo(puesto='', pago_dia='', dias_semana=4, bono_gasolina='', semanas_mes=4) {
+  const eid = 'su-'+Date.now()+Math.random().toString(36).slice(2,5);
+  const lista = document.getElementById('gf-sueldos-lista');
+  const div = document.createElement('div');
+  div.id = eid;
+  div.style.cssText = 'display:grid;grid-template-columns:2fr 80px 70px 90px 80px 80px 24px;gap:6px;align-items:center;margin-bottom:6px';
+  div.innerHTML = `
+    <input type="text" placeholder="ej. Tostador Junior" value="${puesto}" oninput="recalcGastos()" style="font-size:.82rem">
+    <input type="number" step="0.01" placeholder="875" value="${pago_dia}" oninput="recalcGastos()" style="font-size:.82rem">
+    <input type="number" placeholder="4" value="${dias_semana}" oninput="recalcGastos()" style="font-size:.82rem">
+    <input type="number" step="0.01" placeholder="300" value="${bono_gasolina}" oninput="recalcGastos()" style="font-size:.82rem">
+    <input type="number" placeholder="4" value="${semanas_mes}" oninput="recalcGastos()" style="font-size:.82rem">
+    <span id="${eid}-mensual" style="font-size:.82rem;font-weight:600;text-align:right;color:#1a1a1a">$0</span>
+    <button onclick="document.getElementById('${eid}').remove();recalcGastos()" style="background:none;border:none;cursor:pointer;font-size:1rem;color:#bbb">✕</button>
+  `;
+  lista.appendChild(div);
+  recalcGastos();
+}
+
+// ── Gastos fijos: añadir fila de gasto
+function addGastoFijo(concepto='', monto='') {
+  const eid = 'gf-'+Date.now()+Math.random().toString(36).slice(2,5);
+  const lista = document.getElementById('gf-gastos-lista');
+  const div = document.createElement('div');
+  div.id = eid;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 120px 24px;gap:6px;align-items:center;margin-bottom:6px';
+  div.innerHTML = `
+    <input type="text" placeholder="ej. Mantenimiento / imprevistos" value="${concepto}" oninput="recalcGastos()" style="font-size:.82rem">
+    <input type="number" step="0.01" placeholder="300" value="${monto}" oninput="recalcGastos()" style="font-size:.82rem">
+    <button onclick="document.getElementById('${eid}').remove();recalcGastos()" style="background:none;border:none;cursor:pointer;font-size:1rem;color:#bbb">✕</button>
+  `;
+  lista.appendChild(div);
+  recalcGastos();
+}
+
+function getSueldosForm() {
+  return Array.from(document.querySelectorAll('#gf-sueldos-lista > div[id]')).map(div=>{
+    const inputs = div.querySelectorAll('input');
+    return {
+      puesto: inputs[0]?.value||'',
+      pago_dia: parseFloat(inputs[1]?.value)||0,
+      dias_semana: parseFloat(inputs[2]?.value)||4,
+      bono_gasolina: parseFloat(inputs[3]?.value)||0,
+      semanas_mes: parseFloat(inputs[4]?.value)||4,
+    };
+  }).filter(s=>s.puesto);
+}
+
+function getOtrosGastosForm() {
+  return Array.from(document.querySelectorAll('#gf-gastos-lista > div[id]')).map(div=>{
+    const inputs = div.querySelectorAll('input');
+    return {concepto: inputs[0]?.value||'', monto: parseFloat(inputs[1]?.value)||0};
+  }).filter(g=>g.concepto);
+}
+
+function recalcGastos() {
+  // actualizar mensual por fila de sueldo
+  Array.from(document.querySelectorAll('#gf-sueldos-lista > div[id]')).forEach(div=>{
+    const inputs = div.querySelectorAll('input');
+    const pago_dia = parseFloat(inputs[1]?.value)||0;
+    const dias = parseFloat(inputs[2]?.value)||0;
+    const bono = parseFloat(inputs[3]?.value)||0;
+    const semanas = parseFloat(inputs[4]?.value)||4;
+    const mensual = (pago_dia * dias + bono) * semanas;
+    const span = div.querySelector('span');
+    if(span) span.textContent = $m(mensual);
   });
 
-  return {costoGramoVerde, rendimiento, gramos100g, costo100g, mo100g, empaques};
+  const sueldos = getSueldosForm();
+  const totalSueldos = sueldos.reduce((a,s)=>{
+    return a + ((s.pago_dia*s.dias_semana)+s.bono_gasolina)*s.semanas_mes;
+  },0);
+  const otros = getOtrosGastosForm();
+  const totalOtros = otros.reduce((a,g)=>a+g.monto,0);
+  const totalGastos = totalSueldos + totalOtros;
+  const prodKg = parseFloat(document.getElementById('gf-prod-kg')?.value)||0;
+  const costoKg = prodKg > 0 ? totalGastos/prodKg : 0;
+  const costo100g = prodKg > 0 ? totalGastos/(prodKg*1000)*100 : 0;
+
+  const el = id => document.getElementById(id);
+  if(el('gf-total-sueldos')) el('gf-total-sueldos').textContent = $m(totalSueldos);
+  if(el('gf-r-total'))  el('gf-r-total').textContent  = $m(totalGastos);
+  if(el('gf-r-prod'))   el('gf-r-prod').textContent   = prodKg ? `${prodKg} kg` : '-';
+  if(el('gf-r-kg'))     el('gf-r-kg').textContent     = prodKg ? $m(costoKg) : '-';
+  if(el('gf-r-100g'))   el('gf-r-100g').textContent   = prodKg ? $m(costo100g) : '-';
 }
+
+function abrirGastosFijos(id) {
+  _editGFId = id||null;
+  const hoy = new Date();
+  const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('gf-sueldos-lista').innerHTML = '';
+  document.getElementById('gf-gastos-lista').innerHTML = '';
+
+  if(id) {
+    const gf = D_gastos_fijos.find(x=>x.id===id);
+    if(!gf) return;
+    document.getElementById('gf-mes').value = gf.mes||mesActual;
+    document.getElementById('gf-prod-kg').value = gf.produccion_kg||'';
+    (gf.sueldos||[]).forEach(s=>addSueldo(s.puesto, s.pago_dia, s.dias_semana, s.bono_gasolina, s.semanas_mes));
+    (gf.otros_gastos||[]).forEach(g=>addGastoFijo(g.concepto, g.monto));
+  } else {
+    document.getElementById('gf-mes').value = mesActual;
+    document.getElementById('gf-prod-kg').value = '';
+    // Gastos fijos default del PDF
+    addSueldo('Tostador Junior', 875, 4, 300, 4);
+    addGastoFijo('Mantenimiento / imprevistos', 300);
+    addGastoFijo('Contador', 1000);
+    addGastoFijo('Gasolina', 3000);
+    addGastoFijo('Gasto de tostadora al mes', 13760);
+  }
+  recalcGastos();
+  openModal('m-gastos');
+}
+
+async function guardarGastosFijos() {
+  const mes = document.getElementById('gf-mes')?.value;
+  if(!mes) return alert('Selecciona un mes');
+  const data = {
+    mes,
+    produccion_kg: parseFloat(document.getElementById('gf-prod-kg')?.value)||0,
+    sueldos: getSueldosForm(),
+    otros_gastos: getOtrosGastosForm(),
+  };
+  let r;
+  if(_editGFId) {
+    r = await api('PUT', `/api/gastos-fijos/${_editGFId}`, data);
+    const idx = D_gastos_fijos.findIndex(x=>x.id===_editGFId);
+    if(idx>=0) D_gastos_fijos[idx] = r;
+  } else {
+    r = await api('POST', '/api/gastos-fijos', data);
+    D_gastos_fijos.push(r);
+  }
+  closeModal('m-gastos');
+  renderCostos();
+}
+
+// ── Fichas de costo de grano
 
 function recalcCosto() {
   const ficha = getFichaFormData();
-  const r = calcCostos(ficha);
+  const costo_fijo_100g = currentGF ? calcGF(currentGF).costo100g : 0;
+  const r = calcCostos(ficha, costo_fijo_100g);
 
   const infoVerde = document.getElementById('co-info-verde');
   if(infoVerde) {
     if(ficha.kg_comprados && ficha.costo_total) {
       infoVerde.innerHTML = `
-        <span><b>Costo/gramo verde:</b> ${$m(r.costoGramoVerde)}</span>
+        <span><b>Costo/g verde:</b> ${$m(r.costoGramoVerde)}</span>
         <span><b>Rendimiento:</b> ${r.rendimiento.toFixed(1)}%</span>
-        <span><b>Gramos verdes por 100g tostado:</b> ${r.gramos100g.toFixed(1)}g</span>
+        <span><b>Gramos verdes/100g:</b> ${r.gramos100g.toFixed(1)}g</span>
         <span><b>Costo 100g tostado:</b> ${$m(r.costo100g)}</span>
       `;
-    } else {
-      infoVerde.innerHTML = '';
-    }
+    } else { infoVerde.innerHTML = ''; }
   }
-
-  const moInfo = document.getElementById('co-mo-info');
-  if(moInfo) moInfo.textContent = r.mo100g > 0 ? `MO por 100g tostado: ${$m(r.mo100g)}` : '';
 
   const preview = document.getElementById('co-preview');
   const tabla = document.getElementById('co-tabla-preview');
@@ -1939,22 +2144,20 @@ function recalcCosto() {
     tabla.innerHTML = `
       <tr style="background:#f5f5f5;font-weight:600">
         <th style="padding:6px 8px;text-align:left">Formato</th>
-        <th style="padding:6px 8px;text-align:right">Costo granos</th>
+        <th style="padding:6px 8px;text-align:right">Granos</th>
         <th style="padding:6px 8px;text-align:right">Empaque</th>
-        <th style="padding:6px 8px;text-align:right">MO</th>
-        <th style="padding:6px 8px;text-align:right;background:#fffbe6">Total unitario</th>
+        <th style="padding:6px 8px;text-align:right">Gastos fijos</th>
+        <th style="padding:6px 8px;text-align:right;background:#fffbe6">Total</th>
       </tr>
       ${r.empaques.map(e=>`<tr style="border-top:1px solid #f0f0f0">
         <td style="padding:6px 8px">${e.nombre}</td>
-        <td style="padding:6px 8px;text-align:right">${$m(e.costoGramos)}</td>
+        <td style="padding:6px 8px;text-align:right">${$m(e.costoGranos)}</td>
         <td style="padding:6px 8px;text-align:right">${$m(e.costoEmpaque)}</td>
-        <td style="padding:6px 8px;text-align:right">${$m(e.costoMO)}</td>
+        <td style="padding:6px 8px;text-align:right">${$m(e.costoFijo)}</td>
         <td style="padding:6px 8px;text-align:right;font-weight:600;background:#fffbe6">${$m(e.costoUnitario)}</td>
       </tr>`).join('')}
     `;
-  } else {
-    preview.style.display = 'none';
-  }
+  } else { preview.style.display = 'none'; }
 }
 
 function addEmpaque(nombre='', gramos='', bolsa='', sticker='') {
@@ -1977,12 +2180,7 @@ function addEmpaque(nombre='', gramos='', bolsa='', sticker='') {
 function getEmpaques() {
   return Array.from(document.querySelectorAll('#co-empaques-lista > div[id]')).map(div=>{
     const inputs = div.querySelectorAll('input');
-    return {
-      nombre: inputs[0]?.value||'',
-      gramos: parseFloat(inputs[1]?.value)||0,
-      bolsa: parseFloat(inputs[2]?.value)||0,
-      sticker: parseFloat(inputs[3]?.value)||0,
-    };
+    return {nombre:inputs[0]?.value||'', gramos:parseFloat(inputs[1]?.value)||0, bolsa:parseFloat(inputs[2]?.value)||0, sticker:parseFloat(inputs[3]?.value)||0};
   }).filter(e=>e.nombre);
 }
 
@@ -1994,8 +2192,6 @@ function getFichaFormData() {
     kg_comprados: document.getElementById('co-kg')?.value||'',
     costo_total: document.getElementById('co-costo-total')?.value||'',
     merma: document.getElementById('co-merma')?.value||13,
-    mo_mensual: document.getElementById('co-mo-mes')?.value||0,
-    mo_produccion: document.getElementById('co-mo-prod')?.value||100,
     notas: document.getElementById('co-notas')?.value||'',
     empaques: getEmpaques(),
   };
@@ -2007,8 +2203,20 @@ function abrirFicha(id) {
   document.getElementById('m-costo-btn').textContent = id ? 'Guardar cambios' : 'Guardar ficha';
   document.getElementById('co-empaques-lista').innerHTML = '';
   document.getElementById('co-info-verde').innerHTML = '';
-  document.getElementById('co-mo-info').textContent = '';
   document.getElementById('co-preview').style.display = 'none';
+
+  // Mostrar badge de gastos fijos activos
+  const badge = document.getElementById('co-gf-badge');
+  if(badge) {
+    if(currentGF) {
+      const r = calcGF(currentGF);
+      badge.innerHTML = `<b>Gastos fijos (${currentGF.mes}):</b> Total ${$m(r.totalGastos)} · Producción ${r.prodKg}kg · <b>Costo fijo/100g: ${$m(r.costo100g)}</b> — este valor se suma automáticamente a cada formato.`;
+      badge.style.display = '';
+    } else {
+      badge.innerHTML = `Sin gastos fijos configurados. <a href="#" onclick="closeModal('m-costo');abrirGastosFijos();return false" style="color:#d97706">Configurar ahora</a>`;
+      badge.style.display = '';
+    }
+  }
 
   if(id) {
     const f = D_fichas.find(x=>x.id===id);
@@ -2019,20 +2227,11 @@ function abrirFicha(id) {
     document.getElementById('co-kg').value = f.kg_comprados||'';
     document.getElementById('co-costo-total').value = f.costo_total||'';
     document.getElementById('co-merma').value = f.merma||13;
-    document.getElementById('co-mo-mes').value = f.mo_mensual||'';
-    document.getElementById('co-mo-prod').value = f.mo_produccion||'';
     document.getElementById('co-notas').value = f.notas||'';
     (f.empaques||[]).forEach(e=>addEmpaque(e.nombre, e.gramos, e.bolsa, e.sticker));
   } else {
-    document.getElementById('co-nombre').value = '';
-    document.getElementById('co-origen').value = '';
-    document.getElementById('co-tipo').value = '';
-    document.getElementById('co-kg').value = '';
-    document.getElementById('co-costo-total').value = '';
+    ['co-nombre','co-origen','co-tipo','co-kg','co-costo-total','co-notas'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('co-merma').value = 13;
-    document.getElementById('co-mo-mes').value = '';
-    document.getElementById('co-mo-prod').value = '';
-    document.getElementById('co-notas').value = '';
     FORMATOS_DEFAULT.forEach(f=>addEmpaque(f.nombre, f.gramos, f.bolsa, f.sticker));
   }
   openModal('m-costo');
@@ -2064,9 +2263,12 @@ async function eliminarFicha(id) {
 function verFichaTecnica(id) {
   const f = D_fichas.find(x=>x.id===id);
   if(!f) return;
-  const r = calcCostos(f);
+  const costo_fijo_100g = currentGF ? calcGF(currentGF).costo100g : 0;
+  const r = calcCostos(f, costo_fijo_100g);
+  const gfInfo = currentGF ? `<div style="background:#fffbe6;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#92400e;margin-bottom:16px"><b>Gastos fijos (${currentGF.mes}):</b> ${$m(calcGF(currentGF).totalGastos)} total · ${currentGF.produccion_kg}kg producción · Costo fijo/100g: <b>${$m(costo_fijo_100g)}</b></div>` : '';
   document.getElementById('m-ft-titulo').textContent = f.nombre + (f.origen ? ` · ${f.origen}` : '');
   document.getElementById('m-ft-body').innerHTML = `
+    ${gfInfo}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
       <div style="background:#f9f9f9;border-radius:10px;padding:14px">
         <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Datos del grano</div>
@@ -2077,19 +2279,19 @@ function verFichaTecnica(id) {
         </div>
       </div>
       <div style="background:#f9f9f9;border-radius:10px;padding:14px">
-        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Costo verde</div>
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Costo grano verde</div>
         <div style="font-size:.85rem;line-height:1.9">
-          <div><b>Costo total:</b> ${$m(f.costo_total)}</div>
+          <div><b>Costo total compra:</b> ${$m(f.costo_total)}</div>
           <div><b>Costo/gramo verde:</b> ${$m(r.costoGramoVerde)}</div>
           <div><b>Merma:</b> ${f.merma||13}%</div>
         </div>
       </div>
       <div style="background:#f9f9f9;border-radius:10px;padding:14px">
-        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Tostado</div>
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Grano tostado</div>
         <div style="font-size:.85rem;line-height:1.9">
           <div><b>Rendimiento:</b> ${r.rendimiento.toFixed(1)}%</div>
           <div><b>Gramos verdes/100g:</b> ${r.gramos100g.toFixed(1)}g</div>
-          <div><b>Costo 100g tostado:</b> ${$m(r.costo100g)}</div>
+          <div><b>Costo granos/100g:</b> ${$m(r.costo100g)}</div>
         </div>
       </div>
     </div>
@@ -2103,7 +2305,7 @@ function verFichaTecnica(id) {
             <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Costo granos</th>
             <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Bolsa</th>
             <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Sticker</th>
-            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">MO</th>
+            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Gastos fijos</th>
             <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee;background:#fffbe6">Total</th>
           </tr>
         </thead>
@@ -2111,10 +2313,10 @@ function verFichaTecnica(id) {
           ${r.empaques.map(e=>`<tr style="border-bottom:1px solid #f5f5f5">
             <td style="padding:8px 12px;font-weight:600">${e.nombre}</td>
             <td style="padding:8px 12px;text-align:right;color:#777">${e.gramos}g</td>
-            <td style="padding:8px 12px;text-align:right">${$m(e.costoGramos)}</td>
+            <td style="padding:8px 12px;text-align:right">${$m(e.costoGranos)}</td>
             <td style="padding:8px 12px;text-align:right">${$m(e.bolsa)}</td>
             <td style="padding:8px 12px;text-align:right">${$m(e.sticker)}</td>
-            <td style="padding:8px 12px;text-align:right">${$m(e.costoMO)}</td>
+            <td style="padding:8px 12px;text-align:right">${$m(e.costoFijo)}</td>
             <td style="padding:8px 12px;text-align:right;font-weight:700;background:#fffbe6">${$m(e.costoUnitario)}</td>
           </tr>`).join('')}
         </tbody>
@@ -2129,14 +2331,41 @@ async function renderCostos() {
   if(!D_fichas.length) {
     try { D_fichas = await api('GET','/api/fichas'); } catch(e) { D_fichas = []; }
   }
+  if(!D_gastos_fijos.length) {
+    try { D_gastos_fijos = await api('GET','/api/gastos-fijos'); } catch(e) { D_gastos_fijos = []; }
+  }
+
+  // Determinar gastos fijos del mes actual (o el más reciente)
+  const mesActual = new Date().toISOString().slice(0,7);
+  currentGF = D_gastos_fijos.find(g=>g.mes===mesActual) || D_gastos_fijos[0] || null;
+
+  // Banner gastos fijos
+  const banner = document.getElementById('costos-gf-banner');
+  const empty = document.getElementById('costos-gf-empty');
+  if(currentGF) {
+    const r = calcGF(currentGF);
+    document.getElementById('gf-banner-mes').textContent = currentGF.mes;
+    document.getElementById('gf-banner-detalle').textContent =
+      `Sueldos ${$m(r.totalSueldos)} + Otros ${$m(r.totalOtros)}`;
+    document.getElementById('gf-banner-total').textContent = $m(r.totalGastos);
+    document.getElementById('gf-banner-prod').textContent = `${r.prodKg} kg`;
+    document.getElementById('gf-banner-100g').textContent = $m(r.costo100g);
+    banner.style.display = '';
+    if(empty) empty.style.display = 'none';
+  } else {
+    if(banner) banner.style.display = 'none';
+    if(empty)  empty.style.display = '';
+  }
+
   const lista = document.getElementById('lista-costos');
   if(!lista) return;
   if(!D_fichas.length) {
     lista.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#aaa">No hay fichas de costos. Crea una con el botón + Nueva ficha.</div>`;
     return;
   }
+  const costo_fijo_100g = currentGF ? calcGF(currentGF).costo100g : 0;
   lista.innerHTML = D_fichas.map(f => {
-    const r = calcCostos(f);
+    const r = calcCostos(f, costo_fijo_100g);
     const min = r.empaques.length ? Math.min(...r.empaques.map(e=>e.costoUnitario)) : null;
     const max = r.empaques.length ? Math.max(...r.empaques.map(e=>e.costoUnitario)) : null;
     return `<div class="item" style="cursor:default">
@@ -2146,8 +2375,8 @@ async function renderCostos() {
       </div>
       <div style="display:flex;align-items:center;gap:12px">
         ${min !== null ? `<div style="text-align:right">
-          <div style="font-size:.75rem;color:#aaa">Rango de costo</div>
-          <div style="font-size:.95rem;font-weight:600">${$m(min)} – ${$m(max)}</div>
+          <div style="font-size:.75rem;color:#aaa">Costo unitario</div>
+          <div style="font-size:.95rem;font-weight:600">${$m(min)}${min!==max?' – '+$m(max):''}</div>
         </div>` : ''}
         <button class="btn btn-sm btn-outline" onclick="verFichaTecnica(${f.id})">Ver ficha</button>
         <button class="btn btn-sm btn-outline" onclick="abrirFicha(${f.id})">Editar</button>
