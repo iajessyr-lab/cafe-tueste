@@ -414,28 +414,54 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 </div>
 
 <!-- MODALES -->
-<div class="overlay" id="m-lote"><div class="modal">
+<div class="overlay" id="m-lote"><div class="modal" style="max-width:720px">
   <div class="modal-head"><h3 id="m-lote-title">Nuevo lote</h3><button class="modal-close" onclick="closeModal('m-lote')">&#x2715;</button></div>
   <div class="modal-body">
-    <div class="fg" style="grid-template-columns:1fr 1fr">
-      <div class="fl"><label>Codigo / Referencia</label><input id="l-codigo" type="text" placeholder="ej. L-001"></div>
-      <div class="fl"><label>Cafe verde</label><select id="l-verde-id"><option value="">-- Selecciona --</option></select></div>
-      <div class="fl"><label>Origen / Variedad</label><input id="l-origen" type="text" placeholder="ej. Colombia Huila"></div>
-      <div class="fl"><label>Perfil de tueste</label>
-        <select id="l-perfil"><option>Claro</option><option selected>Medio</option><option>Medio-Oscuro</option><option>Oscuro</option><option>Espresso</option></select>
-      </div>
+    <!-- IDENTIFICACIÓN -->
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#aaa;margin-bottom:8px;letter-spacing:.5px">Identificación</div>
+    <div class="fg" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px">
+      <div class="fl"><label>Código / Referencia</label><input id="l-codigo" type="text" placeholder="ej. LC-01"></div>
       <div class="fl"><label>Fecha de tueste</label><input id="l-fecha" type="date"></div>
-      <div class="fl"><label>Dias de reposo</label><input id="l-reposo" type="number" value="7" min="0"></div>
-      <div class="fl"><label>Peso verde (kg)</label><input id="l-verde" type="number" step="0.01" placeholder="0.00"></div>
-      <div class="fl"><label>Peso tostado (kg)</label><input id="l-tostado" type="number" step="0.01" placeholder="0.00"></div>
-      <div class="fl"><label>Cliente / Destino</label><input id="l-cliente" type="text" placeholder="ej. Cafeteria Norte"></div>
-      <div class="fl"><label>Score SCA</label><input id="l-score" type="number" step="0.1" min="0" max="100" placeholder="ej. 86.5"></div>
-      <div class="fl" style="grid-column:1/-1"><label>Notas de cata</label><input id="l-notas" type="text" placeholder="chocolate, caramelo, frutas rojas..."></div>
+      <div class="fl"><label>Tostador</label><input id="l-tostador" type="text" placeholder="ej. Jesus"></div>
     </div>
+    <!-- CAFÉ -->
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#aaa;margin-bottom:8px;letter-spacing:.5px">Café</div>
+    <div class="fg" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+      <div class="fl"><label>Café verde (inventario)</label><select id="l-verde-id"><option value="">-- Selecciona --</option></select></div>
+      <div class="fl"><label>Origen / Nombre del grano</label><input id="l-origen" type="text" placeholder="ej. Castelan Lavado Medio"></div>
+    </div>
+    <!-- DATOS DEL TUESTE -->
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#aaa;margin-bottom:8px;letter-spacing:.5px">Datos del tueste</div>
+    <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:14px">
+      <div class="fg" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:10px">
+        <div class="fl"><label>Peso verde (kg)</label><input id="l-verde" type="number" step="0.01" placeholder="17.25" oninput="calcRendLote()"></div>
+        <div class="fl"><label>Peso tostado (kg)</label><input id="l-tostado" type="number" step="0.01" placeholder="15.00" oninput="calcRendLote()"></div>
+        <div class="fl"><label>Rendimiento (%)</label><input id="l-rendimiento" type="number" step="0.1" placeholder="auto" style="background:#f0f0f0" readonly></div>
+        <div class="fl"><label>Merma (%)</label><input id="l-merma" type="number" step="0.1" placeholder="auto" style="background:#f0f0f0" readonly></div>
+      </div>
+      <div class="fg" style="grid-template-columns:1fr 1fr 1fr 1fr">
+        <div class="fl"><label>Perfil de tueste</label>
+          <select id="l-perfil"><option>Claro</option><option selected>Medio</option><option>Medio Alto</option><option>Medio-Oscuro</option><option>Oscuro</option><option>Espresso</option></select>
+        </div>
+        <div class="fl"><label>Duración (min)</label><input id="l-duracion" type="number" step="0.1" placeholder="ej. 12.5"></div>
+        <div class="fl"><label>Temp. 1er crack (°C)</label><input id="l-temp-crack" type="number" step="0.1" placeholder="ej. 198"></div>
+        <div class="fl"><label>DTR %</label><input id="l-dtr" type="number" step="0.1" placeholder="ej. 22"></div>
+      </div>
+    </div>
+    <!-- RESULTADO & REPOSO -->
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#aaa;margin-bottom:8px;letter-spacing:.5px">Resultado & Reposo</div>
+    <div class="fg" style="grid-template-columns:1fr 1fr 1fr 1fr;margin-bottom:14px">
+      <div class="fl"><label>Color Agtron</label><input id="l-agtron" type="number" placeholder="ej. 58"></div>
+      <div class="fl"><label>Score SCA</label><input id="l-score" type="number" step="0.1" min="0" max="100" placeholder="ej. 86.5"></div>
+      <div class="fl"><label>Días de reposo</label><input id="l-reposo" type="number" value="7" min="0"></div>
+      <div class="fl"><label>Destino / Cliente</label><input id="l-cliente" type="text" placeholder="ej. Creto"></div>
+    </div>
+    <!-- CATA -->
+    <div class="fl"><label>Notas de cata</label><input id="l-notas" type="text" placeholder="chocolate oscuro, caramelo, frutos rojos, acidez brillante..."></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-lote')">Cancelar</button>
-    <button class="btn btn-dark" onclick="guardarLote()">Guardar</button>
+    <button class="btn btn-dark" onclick="guardarLote()">Guardar lote</button>
   </div>
 </div></div>
 
@@ -1049,52 +1075,111 @@ function estadoLote(l) {
   return l.fecha_lista&&new Date(l.fecha_lista+'T12:00:00')<=hoyD ? 'listo' : 'reposo';
 }
 
+function calcRendLote() {
+  const v = parseFloat(document.getElementById('l-verde')?.value)||0;
+  const t = parseFloat(document.getElementById('l-tostado')?.value)||0;
+  if(v>0 && t>0) {
+    document.getElementById('l-rendimiento').value = ((t/v)*100).toFixed(1);
+    document.getElementById('l-merma').value = (((v-t)/v)*100).toFixed(1);
+  } else {
+    document.getElementById('l-rendimiento').value = '';
+    document.getElementById('l-merma').value = '';
+  }
+}
+
 function renderTueste() {
   const hoyD=new Date(); hoyD.setHours(12,0,0,0);
   const todos = D.lotes.map(l=>({...l,_e:estadoLote(l)}));
   const lista = filtTueste==='todos' ? todos : todos.filter(l=>l._e===filtTueste);
   const el = document.getElementById('lista-tueste');
   if (!lista.length){el.innerHTML='<div class="empty">Sin lotes registrados.</div>';return;}
+
   const bMap={reposo:'b-gray',listo:'b-dark',entregado:'b-outline'};
   const lMap={reposo:'En reposo',listo:'Listo',entregado:'Entregado'};
-  el.innerHTML = lista.map(l=>{
-    const est=l._e;
-    const prog=()=>{
-      const ini=new Date(l.fecha_tueste+'T12:00:00');
-      const fin=l.fecha_lista?new Date(l.fecha_lista+'T12:00:00'):ini;
-      if(hoyD>=fin) return 100;
-      return Math.max(0,Math.min(100,Math.round((hoyD-ini)/(fin-ini)*100)));
-    };
-    const dias=est==='reposo'&&l.fecha_lista?Math.ceil((new Date(l.fecha_lista+'T12:00:00')-hoyD)/86400000):0;
-    const rend=l.peso_verde&&l.peso_tostado?((l.peso_tostado/l.peso_verde)*100).toFixed(1)+'%':'';
-    return `<div class="row">
-      <div class="row-top">
-        <div>
-          ${l.codigo?`<span style="font-size:.72rem;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px">${l.codigo} &nbsp;·&nbsp; </span>`:''}
-          <span class="row-title">${l.origen_nombre||'Sin nombre'}</span>
+
+  // Agrupar por fecha
+  const porFecha = {};
+  lista.forEach(l => {
+    const f = (l.fecha_tueste||'').slice(0,10);
+    if(!porFecha[f]) porFecha[f] = [];
+    porFecha[f].push(l);
+  });
+
+  el.innerHTML = Object.keys(porFecha).sort().reverse().map(fecha => {
+    const batches = porFecha[fecha];
+    const totalVerde  = batches.reduce((a,l)=>a+(parseFloat(l.peso_verde)||0),0);
+    const totalTostado = batches.reduce((a,l)=>a+(parseFloat(l.peso_tostado)||0),0);
+    const rendProm = totalVerde>0 ? ((totalTostado/totalVerde)*100).toFixed(1) : null;
+    const tostador = batches.find(l=>l.tostador)?.tostador || '';
+
+    return `<div style="margin-bottom:24px">
+      <!-- Encabezado de sesión -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#f9f9f9;border-radius:10px 10px 0 0;border:1px solid #eee;border-bottom:none">
+        <div style="flex:1">
+          <div style="font-size:.78rem;font-weight:700;color:#1a1a1a">${fmt(fecha)}</div>
+          <div style="font-size:.72rem;color:#888;margin-top:2px">
+            ${batches.length} batch${batches.length!==1?'es':''} ·
+            ${totalVerde>0?`${totalVerde.toFixed(2)} kg verde`:''}
+            ${totalTostado>0?` → ${totalTostado.toFixed(2)} kg tostado`:''}
+            ${rendProm?` · Rendimiento prom. ${rendProm}%`:''}
+            ${tostador?` · ${tostador}`:''}
+          </div>
         </div>
-        <span class="badge ${bMap[est]}">${lMap[est]}</span>
+        <button class="btn btn-sm btn-outline" onclick="abrirLoteFecha('${fecha}')">+ Batch</button>
       </div>
-      <div class="row-meta">
-        <span>${fmt(l.fecha_tueste)}</span>
-        ${l.peso_tostado?`<span>${parseFloat(l.peso_tostado).toFixed(2)} kg tostados</span>`:''}
-        ${rend?`<span>Rendimiento ${rend}</span>`:''}
-        <span>${l.perfil||''}</span>
-        ${l.cliente?`<span>${l.cliente}</span>`:''}
-        ${l.score_sca?`<span class="hi">SCA ${l.score_sca}</span>`:''}
-        ${l.notas_cata?`<span>${l.notas_cata}</span>`:''}
-        ${est==='reposo'?`<span>${dias} dia(s) · listo ${fmt(l.fecha_lista)}</span>`:''}
-        ${l.fuente==='cropster'?`<span style="background:#e8f0fe;color:#1a56db">Cropster</span>`:''}
-      </div>
-      ${est==='reposo'?`<div class="prog"><div class="prog-fill" style="width:${prog()}%"></div></div>`:''}
-      <div class="row-actions">
-        <button class="btn btn-sm" onclick="abrirLote(${l.id})">Editar</button>
-        ${est==='listo'?`<button class="btn btn-sm btn-sm-green" onclick="cambiarEstadoLote(${l.id},'entregado')">Marcar entregado</button>`:''}
-        ${est==='entregado'?`<button class="btn btn-sm" onclick="cambiarEstadoLote(${l.id},'activo')">Reactivar</button>`:''}
-        <button class="btn btn-sm btn-sm-red" onclick="eliminar('lotes',${l.id})">Eliminar</button>
+      <!-- Batches del día -->
+      <div style="border:1px solid #eee;border-radius:0 0 10px 10px;overflow:hidden">
+        ${batches.map((l,i) => {
+          const est=l._e;
+          const dias=est==='reposo'&&l.fecha_lista?Math.ceil((new Date((l.fecha_lista||'').slice(0,10)+'T12:00:00')-hoyD)/86400000):0;
+          const rend=l.peso_verde&&l.peso_tostado?((parseFloat(l.peso_tostado)/parseFloat(l.peso_verde))*100).toFixed(1)+'%':'';
+          const prog=()=>{
+            const ini=new Date((l.fecha_tueste||'').slice(0,10)+'T12:00:00');
+            const fin=l.fecha_lista?new Date((l.fecha_lista||'').slice(0,10)+'T12:00:00'):ini;
+            if(hoyD>=fin) return 100;
+            return Math.max(0,Math.min(100,Math.round((hoyD-ini)/(fin-ini)*100)));
+          };
+          return `<div style="padding:12px 16px;${i>0?'border-top:1px solid #f5f5f5':''}">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                  ${l.codigo?`<span style="font-size:.7rem;font-weight:700;color:#999;background:#f0f0f0;padding:2px 7px;border-radius:4px">${l.codigo}</span>`:''}
+                  <span style="font-weight:600;font-size:.9rem">${l.origen_nombre||'Sin nombre'}</span>
+                  <span class="badge ${bMap[est]}" style="font-size:.65rem;padding:2px 8px">${lMap[est]}</span>
+                  ${l.fuente==='cropster'?`<span style="background:#e8f0fe;color:#1a56db;font-size:.65rem;padding:2px 8px;border-radius:4px">Cropster</span>`:''}
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:.75rem;color:#777">
+                  ${l.peso_tostado?`<span>⚖️ ${parseFloat(l.peso_tostado).toFixed(2)} kg tostados</span>`:''}
+                  ${rend?`<span>📊 Rend. ${rend}</span>`:''}
+                  ${l.perfil?`<span>🔥 ${l.perfil}</span>`:''}
+                  ${l.duracion_min?`<span>⏱ ${l.duracion_min} min</span>`:''}
+                  ${l.temp_primer_crack?`<span>🌡 1er crack ${l.temp_primer_crack}°C</span>`:''}
+                  ${l.dtr?`<span>DTR ${l.dtr}%</span>`:''}
+                  ${l.agtron?`<span>Agtron ${l.agtron}</span>`:''}
+                  ${l.score_sca?`<span class="hi">SCA ${l.score_sca}</span>`:''}
+                  ${l.cliente?`<span>👤 ${l.cliente}</span>`:''}
+                  ${est==='reposo'?`<span style="color:#d97706">⏳ ${dias} día(s) · listo ${fmt(l.fecha_lista)}</span>`:''}
+                </div>
+                ${l.notas_cata?`<div style="font-size:.75rem;color:#999;margin-top:4px;font-style:italic">${l.notas_cata}</div>`:''}
+                ${est==='reposo'?`<div style="height:4px;background:#f0f0f0;border-radius:2px;margin-top:8px"><div style="height:100%;width:${prog()}%;background:#1a1a1a;border-radius:2px;transition:width .3s"></div></div>`:''}
+              </div>
+              <div style="display:flex;gap:6px;flex-shrink:0">
+                <button class="btn btn-sm btn-outline" onclick="abrirLote(${l.id})">Editar</button>
+                ${est==='listo'?`<button class="btn btn-sm" style="background:#d1fae5;color:#065f46;border-color:#a7f3d0" onclick="cambiarEstadoLote(${l.id},'entregado')">✓ Listo</button>`:''}
+                ${est==='entregado'?`<button class="btn btn-sm btn-outline" onclick="cambiarEstadoLote(${l.id},'reposo')">Reactivar</button>`:''}
+                <button class="btn btn-sm" style="background:#fde8e8;color:#c0392b;border-color:#f5c0c0" onclick="eliminar('lotes',${l.id})">✕</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
   }).join('');
+}
+
+function abrirLoteFecha(fecha) {
+  abrirLote();
+  setTimeout(()=>{ document.getElementById('l-fecha').value = fecha; }, 50);
 }
 
 function ft(f,btn){
@@ -1116,16 +1201,22 @@ function abrirLote(id) {
       document.getElementById('l-verde-id').value=l.cafe_verde_id||'';
       document.getElementById('l-origen').value=l.origen_nombre||'';
       document.getElementById('l-perfil').value=l.perfil||'Medio';
-      document.getElementById('l-fecha').value=l.fecha_tueste||hoy();
+      document.getElementById('l-fecha').value=(l.fecha_tueste||'').slice(0,10)||hoy();
       document.getElementById('l-reposo').value=l.dias_reposo||7;
       document.getElementById('l-verde').value=l.peso_verde||'';
       document.getElementById('l-tostado').value=l.peso_tostado||'';
+      document.getElementById('l-tostador').value=l.tostador||'';
+      document.getElementById('l-duracion').value=l.duracion_min||'';
+      document.getElementById('l-temp-crack').value=l.temp_primer_crack||'';
+      document.getElementById('l-dtr').value=l.dtr||'';
+      document.getElementById('l-agtron').value=l.agtron||'';
       document.getElementById('l-cliente').value=l.cliente||'';
       document.getElementById('l-score').value=l.score_sca||'';
       document.getElementById('l-notas').value=l.notas_cata||'';
+      calcRendLote();
     }
   } else {
-    ['l-codigo','l-origen','l-verde','l-tostado','l-cliente','l-score','l-notas'].forEach(id=>document.getElementById(id).value='');
+    ['l-codigo','l-origen','l-verde','l-tostado','l-tostador','l-duracion','l-temp-crack','l-dtr','l-agtron','l-cliente','l-score','l-notas','l-rendimiento','l-merma'].forEach(fid=>document.getElementById(fid).value='');
     document.getElementById('l-fecha').value=hoy();
     document.getElementById('l-reposo').value=7;
   }
@@ -1145,10 +1236,15 @@ async function guardarLote() {
     fecha_lista: fl.toISOString().split('T')[0],
     peso_verde: parseFloat(document.getElementById('l-verde').value)||0,
     peso_tostado: parseFloat(document.getElementById('l-tostado').value)||0,
+    tostador: document.getElementById('l-tostador').value.trim(),
+    duracion_min: parseFloat(document.getElementById('l-duracion').value)||null,
+    temp_primer_crack: parseFloat(document.getElementById('l-temp-crack').value)||null,
+    dtr: parseFloat(document.getElementById('l-dtr').value)||null,
+    agtron: parseInt(document.getElementById('l-agtron').value)||null,
     cliente: document.getElementById('l-cliente').value.trim(),
     score_sca: parseFloat(document.getElementById('l-score').value)||null,
     notas_cata: document.getElementById('l-notas').value.trim(),
-    estado: 'reposo'
+    estado: editLoteId ? undefined : 'reposo'
   };
   if (!body.origen_nombre) return alert('Ingresa el origen o variedad del cafe.');
   try {

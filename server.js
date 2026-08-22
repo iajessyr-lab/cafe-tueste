@@ -64,6 +64,11 @@ async function initDB() {
       fuente VARCHAR(20) DEFAULT 'manual',
       creado_en TIMESTAMP DEFAULT NOW()
     );
+    ALTER TABLE ct_lotes ADD COLUMN IF NOT EXISTS tostador VARCHAR(100);
+    ALTER TABLE ct_lotes ADD COLUMN IF NOT EXISTS duracion_min NUMERIC(5,1);
+    ALTER TABLE ct_lotes ADD COLUMN IF NOT EXISTS temp_primer_crack NUMERIC(5,1);
+    ALTER TABLE ct_lotes ADD COLUMN IF NOT EXISTS dtr NUMERIC(4,1);
+    ALTER TABLE ct_lotes ADD COLUMN IF NOT EXISTS agtron INTEGER;
 
     CREATE TABLE IF NOT EXISTS ct_productos (
       id SERIAL PRIMARY KEY,
@@ -269,23 +274,23 @@ app.get('/api/lotes', auth, async (req, res) => {
   res.json(r.rows);
 });
 app.post('/api/lotes', auth, async (req, res) => {
-  const { codigo,cafe_verde_id,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista,destino,cliente,notas_cata,score_sca,estado,fuente } = req.body;
+  const { codigo,cafe_verde_id,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista,destino,cliente,notas_cata,score_sca,estado,fuente,tostador,duracion_min,temp_primer_crack,dtr,agtron } = req.body;
   // Descontar del inventario verde
   if (cafe_verde_id && peso_verde) {
     await pool.query('UPDATE ct_cafe_verde SET stock_kg=stock_kg-$1 WHERE id=$2', [peso_verde, cafe_verde_id]);
   }
   const r = await pool.query(
-    `INSERT INTO ct_lotes (codigo,cafe_verde_id,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista,destino,cliente,notas_cata,score_sca,estado,fuente)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-    [codigo,cafe_verde_id||null,origen_nombre,peso_verde||0,peso_tostado||0,perfil,fecha_tueste,dias_reposo||7,fecha_lista||null,destino,cliente,notas_cata,score_sca||null,estado||'reposo',fuente||'manual']
+    `INSERT INTO ct_lotes (codigo,cafe_verde_id,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista,destino,cliente,notas_cata,score_sca,estado,fuente,tostador,duracion_min,temp_primer_crack,dtr,agtron)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
+    [codigo,cafe_verde_id||null,origen_nombre,peso_verde||0,peso_tostado||0,perfil,fecha_tueste,dias_reposo||7,fecha_lista||null,destino,cliente,notas_cata,score_sca||null,estado||'reposo',fuente||'manual',tostador||null,duracion_min||null,temp_primer_crack||null,dtr||null,agtron||null]
   );
   res.json(r.rows[0]);
 });
 app.put('/api/lotes/:id', auth, async (req, res) => {
-  const { codigo,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista,destino,cliente,notas_cata,score_sca,estado } = req.body;
+  const { codigo,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista,destino,cliente,notas_cata,score_sca,estado,tostador,duracion_min,temp_primer_crack,dtr,agtron } = req.body;
   const r = await pool.query(
-    `UPDATE ct_lotes SET codigo=$1,origen_nombre=$2,peso_verde=$3,peso_tostado=$4,perfil=$5,fecha_tueste=$6,dias_reposo=$7,fecha_lista=$8,destino=$9,cliente=$10,notas_cata=$11,score_sca=$12,estado=$13 WHERE id=$14 RETURNING *`,
-    [codigo,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista||null,destino,cliente,notas_cata,score_sca||null,estado,req.params.id]
+    `UPDATE ct_lotes SET codigo=$1,origen_nombre=$2,peso_verde=$3,peso_tostado=$4,perfil=$5,fecha_tueste=$6,dias_reposo=$7,fecha_lista=$8,destino=$9,cliente=$10,notas_cata=$11,score_sca=$12,estado=COALESCE($13,estado),tostador=$14,duracion_min=$15,temp_primer_crack=$16,dtr=$17,agtron=$18 WHERE id=$19 RETURNING *`,
+    [codigo,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista||null,destino,cliente,notas_cata,score_sca||null,estado||null,tostador||null,duracion_min||null,temp_primer_crack||null,dtr||null,agtron||null,req.params.id]
   );
   res.json(r.rows[0]);
 });
