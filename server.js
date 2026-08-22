@@ -303,26 +303,50 @@ app.delete('/api/lotes/:id', auth, async (req, res) => {
 app.post('/api/lotes/importar-csv', auth, upload.single('file'), async (req, res) => {
   try {
     const text = req.file.buffer.toString('utf8');
+    // Detectar separador (coma o punto y coma)
+    const sep = text.split('\n')[0].includes(';') ? ';' : ',';
     const lines = text.split('\n').filter(l => l.trim());
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g,''));
+    const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/"/g,'').replace(/\s+/g,' '));
     const lotes = [];
+
+    // Parsear número en formato europeo (17,25 → 17.25) o americano
+    const parseNum = v => parseFloat((v||'0').replace(/"/g,'').replace(',','.')) || 0;
+
+    // Limpiar componente: "[PG-0043] Lavado Corahe 17.25 KG" → "Lavado Corahe"
+    const limpiarOrigen = comp => (comp||'').replace(/\[.*?\]/g,'').replace(/\d+[\.,]?\d*\s*KG/gi,'').trim();
+
     for (let i = 1; i < lines.length; i++) {
-      const vals = lines[i].split(',').map(v => v.trim().replace(/"/g,''));
+      // Manejar valores con comas dentro de comillas
+      const vals = lines[i].match(/(".*?"|[^,;]+)(?=[,;]|$)/g)?.map(v=>v.trim().replace(/^"|"$/g,'')) || lines[i].split(sep).map(v=>v.trim().replace(/"/g,''));
       const row = {};
       headers.forEach((h, idx) => row[h] = vals[idx] || '');
-      // Mapeo flexible de columnas Cropster
-      const fecha = row['date'] || row['fecha'] || row['roast date'] || '';
-      const origen = row['green coffee'] || row['green'] || row['origen'] || row['coffee'] || '';
-      const verdeKg = parseFloat(row['green weight'] || row['verde'] || row['batch weight'] || 0);
-      const tostadoKg = parseFloat(row['roasted weight'] || row['tostado'] || row['end weight'] || 0);
-      const perfil = row['profile'] || row['perfil'] || 'Medio';
-      if (!fecha && !origen) continue;
-      const fl = fecha ? new Date(fecha) : new Date();
+
+      // Mapeo de columnas Cropster (PDF y CSV tienen mismos encabezados)
+      const codigo   = row['etiqueta-id'] || row['label-id'] || row['id'] || row['codigo'] || '';
+      const perfil   = row['perfil'] || row['profile'] || row['roast profile'] || 'Medio';
+      const fechaRaw = row['fecha'] || row['date'] || row['roast date'] || row['start time'] || '';
+      const compRaw  = row['componentes'] || row['components'] || row['green coffee'] || row['green'] || row['coffee'] || '';
+      const verdeKg  = parseNum(row['peso inicial'] || row['green weight'] || row['batch weight'] || row['verde'] || '0');
+      const tostadoKg= parseNum(row['peso final']   || row['roasted weight']|| row['end weight']   || row['tostado'] || '0');
+      const duracion = parseNum(row['duración'] || row['duracion'] || row['duration'] || row['roast time'] || '0') || null;
+      const tempCrack= parseNum(row['temp. 1er crack'] || row['first crack temp'] || row['fc temp'] || '0') || null;
+      const dtr      = parseNum(row['dtr'] || row['dtr %'] || row['development time ratio'] || '0') || null;
+      const agtron   = parseNum(row['agtron'] || row['color'] || '0') || null;
+
+      // Extraer solo la fecha (sin hora) del campo fecha
+      const fechaDate = fechaRaw.trim().split(' ')[0].split('T')[0];
+      const origen = limpiarOrigen(compRaw) || codigo;
+
+      if (!fechaDate || fechaDate === '') continue;
+      if (verdeKg === 0 && tostadoKg === 0 && !origen) continue;
+
+      const fl = new Date(fechaDate + 'T12:00:00');
       fl.setDate(fl.getDate() + 7);
+
       const r = await pool.query(
-        `INSERT INTO ct_lotes (origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista,estado,fuente)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-        [origen,verdeKg,tostadoKg,perfil,fecha||new Date().toISOString().split('T')[0],7,fl.toISOString().split('T')[0],'reposo','cropster']
+        `INSERT INTO ct_lotes (codigo,origen_nombre,peso_verde,peso_tostado,perfil,fecha_tueste,dias_reposo,fecha_lista,estado,fuente,duracion_min,temp_primer_crack,dtr,agtron)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+        [codigo||null,origen,verdeKg,tostadoKg,perfil,fechaDate,7,fl.toISOString().split('T')[0],'reposo','cropster',duracion,tempCrack,dtr,agtron]
       );
       lotes.push(r.rows[0]);
     }
