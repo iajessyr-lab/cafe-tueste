@@ -211,6 +211,14 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Costos
       </button>
+      <button class="s-btn" onclick="go('egresos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Egresos
+      </button>
+      <button class="s-btn" onclick="go('resultados')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Resultados
+      </button>
       <button class="s-btn" onclick="go('pagos')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Pagos
@@ -355,6 +363,27 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
           </div>
         </div>
         <div class="lista" id="lista-costos"></div>
+      </div>
+
+      <!-- EGRESOS -->
+      <div class="sec" id="sec-egresos">
+        <div class="stats" id="egresos-stats"></div>
+        <div class="filtros" style="margin-bottom:16px">
+          <button class="fbtn on" onclick="fegresos('todos',this)">Todos</button>
+          <button class="fbtn" onclick="fegresos('Fijo',this)">Fijos</button>
+          <button class="fbtn" onclick="fegresos('Variable',this)">Variables</button>
+        </div>
+        <div class="lista" id="lista-egresos"></div>
+      </div>
+
+      <!-- RESULTADOS -->
+      <div class="sec" id="sec-resultados">
+        <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <label style="font-size:.8rem;font-weight:600;color:#888">Mes:</label>
+          <input id="res-mes" type="month" onchange="renderResultados()" style="font-size:.88rem;padding:6px 10px;border:1px solid #ddd;border-radius:8px">
+        </div>
+        <div id="resultados-cards" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-bottom:24px"></div>
+        <div id="resultados-body"></div>
       </div>
 
       <!-- PAGOS -->
@@ -672,6 +701,53 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
 </div></div>
 
+<!-- MODAL EGRESO -->
+<div class="overlay" id="m-egreso"><div class="modal" style="max-width:600px">
+  <div class="modal-head"><h3 id="m-egreso-titulo">Nuevo egreso</h3><button class="modal-close" onclick="closeModal('m-egreso')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Fecha</label><input id="eg-fecha" type="date"></div>
+      <div class="fl"><label>Tipo</label>
+        <select id="eg-tipo">
+          <option value="Variable">Variable</option>
+          <option value="Fijo">Fijo</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Categoría</label>
+        <select id="eg-categoria" onchange="updateSubcategorias()">
+          <option value="Operación">Operación</option>
+          <option value="Insumos">Insumos</option>
+          <option value="Logística">Logística</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Servicios">Servicios</option>
+          <option value="Renta">Renta</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="fl"><label>Subcategoría</label><input id="eg-subcategoria" type="text" placeholder="ej. Empaque, Gasolina..."></div>
+    </div>
+    <div class="fl"><label>Descripción</label><input id="eg-descripcion" type="text" placeholder="Detalle del gasto"></div>
+    <div class="fg" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="fl"><label>Total ($)</label><input id="eg-total" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="fl"><label>Método de pago</label>
+        <select id="eg-metodo">
+          <option value="Transferencia">Transferencia</option>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Tarjeta">Tarjeta</option>
+        </select>
+      </div>
+      <div class="fl"><label>Proveedor</label><input id="eg-proveedor" type="text" placeholder="ej. Oxxo, CFE..."></div>
+    </div>
+    <div class="fl"><label>Observaciones</label><input id="eg-obs" type="text" placeholder="Notas adicionales"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-egreso')">Cancelar</button>
+    <button class="btn btn-dark" id="m-egreso-btn" onclick="guardarEgreso()">Guardar egreso</button>
+  </div>
+</div></div>
+
 <!-- MODAL GASTOS FIJOS DEL MES -->
 <div class="overlay" id="m-gastos"><div class="modal" style="max-width:720px">
   <div class="modal-head"><h3 id="m-gastos-titulo">Gastos Fijos del Mes</h3><button class="modal-close" onclick="closeModal('m-gastos')">&#x2715;</button></div>
@@ -879,7 +955,7 @@ function logout() {
 }
 
 // ─── NAVEGACION ────────────────────────────────────────────────────────────────
-const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe Verde',pedidos:'Pedidos',cobros:'Cobros',clientes:'Clientes',productos:'Productos',costos:'Costos de Producción',pagos:'Pagos a Proveedores',sucursales:'Sucursales',usuarios:'Usuarios'};
+const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe Verde',pedidos:'Pedidos',cobros:'Cobros',clientes:'Clientes',productos:'Productos',costos:'Costos de Producción',egresos:'Egresos y Gastos',resultados:'Resultados del Mes',pagos:'Pagos a Proveedores',sucursales:'Sucursales',usuarios:'Usuarios'};
 const ACTIONS = {
   tueste: ()=>`<button class="btn btn-outline" onclick="openModal('m-import')">Importar Cropster</button><button class="btn btn-dark" onclick="abrirLote()">+ Nuevo lote</button>`,
   inventario: ()=>`<button class="btn btn-dark" onclick="abrirVerde()">+ Agregar cafe verde</button>`,
@@ -888,6 +964,8 @@ const ACTIONS = {
   clientes: ()=>`<div style="display:flex;gap:8px"><button class="btn btn-outline" onclick="abrirLunesRecordatorio()" title="Enviar seguimiento semanal por WhatsApp">📅 Seguimiento</button><button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button></div>`,
   productos: ()=>`<button class="btn btn-dark" onclick="abrirProducto()">+ Nuevo producto</button>`,
   costos: ()=>`<button class="btn btn-dark" onclick="abrirFicha()">+ Nueva ficha</button>`,
+  egresos: ()=>`<button class="btn btn-dark" onclick="abrirEgreso()">+ Registrar egreso</button>`,
+  resultados: ()=>``,
   pagos: ()=>`<button class="btn btn-dark" onclick="abrirPago()">+ Nuevo pago</button>`,
   sucursales: ()=>`<button class="btn btn-dark" onclick="resetEntregaForm();openModal('m-entrega')">+ Nueva entrega</button>`,
   usuarios: ()=>`<button class="btn btn-dark" onclick="openModal('m-usuario')">+ Crear usuario</button>`,
@@ -897,10 +975,12 @@ function go(s) {
   document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.s-btn').forEach(e=>e.classList.remove('on'));
   document.getElementById('sec-'+s).classList.add('on');
-  document.querySelectorAll('.s-btn')[['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','costos','pagos','sucursales','usuarios'].indexOf(s)].classList.add('on');
+  document.querySelectorAll('.s-btn')[['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','costos','egresos','resultados','pagos','sucursales','usuarios'].indexOf(s)].classList.add('on');
   if(s==='sucursales') renderSucursales();
   if(s==='pagos') renderPagos();
   if(s==='costos') renderCostos();
+  if(s==='egresos') renderEgresos();
+  if(s==='resultados') renderResultados();
   document.getElementById('topbar-title').textContent = TITLES[s]||s;
   document.getElementById('topbar-actions').innerHTML = ACTIONS[s]?ACTIONS[s]():'';
   if (s==='dashboard') renderDashboard();
@@ -1975,7 +2055,14 @@ function calcCostos(ficha, costo_fijo_100g=0) {
     const costoEmpaque = parseFloat(e.bolsa||0) + parseFloat(e.sticker||0);
     const costoFijo = (e.gramos / 100) * costo_fijo_100g;
     const costoUnitario = costoGranos + costoEmpaque + costoFijo;
-    return {...e, costoGranos, costoEmpaque, costoFijo, costoUnitario};
+    const pp = parseFloat(e.precio_publico)||0;
+    const pm = parseFloat(e.precio_mayoreo)||0;
+    const margenPublico = pp > 0 ? (pp - costoUnitario) / pp : null;
+    const gananciaPublico = pp > 0 ? pp - costoUnitario : null;
+    const margenMayoreo = pm > 0 ? (pm - costoUnitario) / pm : null;
+    const gananciaMayoreo = pm > 0 ? pm - costoUnitario : null;
+    return {...e, costoGranos, costoEmpaque, costoFijo, costoUnitario,
+      margenPublico, gananciaPublico, margenMayoreo, gananciaMayoreo};
   });
   return {costoGramoVerde, rendimiento, gramos100g, costo100g, empaques};
 }
@@ -2141,37 +2228,51 @@ function recalcCosto() {
   const tabla = document.getElementById('co-tabla-preview');
   if(r.empaques.length > 0 && ficha.kg_comprados && ficha.costo_total) {
     preview.style.display = '';
+    const hasPP = r.empaques.some(e=>e.precio_publico>0);
+    const hasPM = r.empaques.some(e=>e.precio_mayoreo>0);
     tabla.innerHTML = `
-      <tr style="background:#f5f5f5;font-weight:600">
+      <tr style="background:#f5f5f5;font-weight:600;font-size:.72rem">
         <th style="padding:6px 8px;text-align:left">Formato</th>
         <th style="padding:6px 8px;text-align:right">Granos</th>
         <th style="padding:6px 8px;text-align:right">Empaque</th>
-        <th style="padding:6px 8px;text-align:right">Gastos fijos</th>
-        <th style="padding:6px 8px;text-align:right;background:#fffbe6">Total</th>
+        <th style="padding:6px 8px;text-align:right">G.Fijos</th>
+        <th style="padding:6px 8px;text-align:right;background:#fffbe6">Costo</th>
+        ${hasPP?`<th style="padding:6px 8px;text-align:right;background:#f0fdf4;color:#166534">P.Público</th><th style="padding:6px 8px;text-align:right;background:#f0fdf4;color:#166534">Margen</th>`:''}
+        ${hasPM?`<th style="padding:6px 8px;text-align:right;background:#eff6ff;color:#1d4ed8">P.Mayoreo</th><th style="padding:6px 8px;text-align:right;background:#eff6ff;color:#1d4ed8">Margen</th>`:''}
       </tr>
       ${r.empaques.map(e=>`<tr style="border-top:1px solid #f0f0f0">
-        <td style="padding:6px 8px">${e.nombre}</td>
+        <td style="padding:6px 8px;font-weight:600">${e.nombre}</td>
         <td style="padding:6px 8px;text-align:right">${$m(e.costoGranos)}</td>
         <td style="padding:6px 8px;text-align:right">${$m(e.costoEmpaque)}</td>
         <td style="padding:6px 8px;text-align:right">${$m(e.costoFijo)}</td>
-        <td style="padding:6px 8px;text-align:right;font-weight:600;background:#fffbe6">${$m(e.costoUnitario)}</td>
+        <td style="padding:6px 8px;text-align:right;font-weight:700;background:#fffbe6">${$m(e.costoUnitario)}</td>
+        ${hasPP?`<td style="padding:6px 8px;text-align:right;background:#f0fdf4">${e.precio_publico>0?$m(e.precio_publico):'-'}</td>
+                 <td style="padding:6px 8px;text-align:right;background:#f0fdf4;font-weight:600;color:${e.margenPublico>0?'#16a34a':'#dc2626'}">${e.margenPublico!==null?(e.margenPublico*100).toFixed(1)+'%':'-'}</td>`:''}
+        ${hasPM?`<td style="padding:6px 8px;text-align:right;background:#eff6ff">${e.precio_mayoreo>0?$m(e.precio_mayoreo):'-'}</td>
+                 <td style="padding:6px 8px;text-align:right;background:#eff6ff;font-weight:600;color:${e.margenMayoreo>0?'#1d4ed8':'#dc2626'}">${e.margenMayoreo!==null?(e.margenMayoreo*100).toFixed(1)+'%':'-'}</td>`:''}
       </tr>`).join('')}
     `;
   } else { preview.style.display = 'none'; }
 }
 
-function addEmpaque(nombre='', gramos='', bolsa='', sticker='') {
+function addEmpaque(nombre='', gramos='', bolsa='', sticker='', precio_publico='', precio_mayoreo='') {
   const eid = 'emp-'+Date.now()+Math.random().toString(36).slice(2,5);
   const lista = document.getElementById('co-empaques-lista');
   const div = document.createElement('div');
   div.id = eid;
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 80px 80px auto;gap:6px;align-items:end;margin-bottom:8px';
+  div.style.cssText = 'border:1px solid #f0f0f0;border-radius:8px;padding:10px;margin-bottom:8px';
   div.innerHTML = `
-    <div class="fl"><label style="font-size:.72rem">Formato</label><input type="text" placeholder="ej. 250g" value="${nombre}" oninput="recalcCosto()"></div>
-    <div class="fl"><label style="font-size:.72rem">Gramos</label><input type="number" placeholder="250" value="${gramos}" oninput="recalcCosto()"></div>
-    <div class="fl"><label style="font-size:.72rem">Bolsa ($)</label><input type="number" step="0.01" placeholder="3.20" value="${bolsa}" oninput="recalcCosto()"></div>
-    <div class="fl"><label style="font-size:.72rem">Sticker ($)</label><input type="number" step="0.01" placeholder="0.90" value="${sticker}" oninput="recalcCosto()"></div>
-    <button onclick="document.getElementById('${eid}').remove();recalcCosto()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#aaa;padding:0 4px;margin-bottom:2px">✕</button>
+    <div style="display:grid;grid-template-columns:1fr 80px 80px 80px auto;gap:6px;align-items:end;margin-bottom:6px">
+      <div class="fl"><label style="font-size:.72rem">Formato</label><input type="text" placeholder="ej. 250g" value="${nombre}" oninput="recalcCosto()"></div>
+      <div class="fl"><label style="font-size:.72rem">Gramos</label><input type="number" placeholder="250" value="${gramos}" oninput="recalcCosto()"></div>
+      <div class="fl"><label style="font-size:.72rem">Bolsa ($)</label><input type="number" step="0.01" placeholder="3.20" value="${bolsa}" oninput="recalcCosto()"></div>
+      <div class="fl"><label style="font-size:.72rem">Sticker ($)</label><input type="number" step="0.01" placeholder="0.90" value="${sticker}" oninput="recalcCosto()"></div>
+      <button onclick="document.getElementById('${eid}').remove();recalcCosto()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#aaa;padding:0 4px;margin-bottom:2px">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div class="fl"><label style="font-size:.72rem;color:#15803d">Precio público ($)</label><input type="number" step="0.01" placeholder="ej. 280" value="${precio_publico}" oninput="recalcCosto()" style="border-color:#bbf7d0"></div>
+      <div class="fl"><label style="font-size:.72rem;color:#1d4ed8">Precio mayoreo ($)</label><input type="number" step="0.01" placeholder="ej. 184" value="${precio_mayoreo}" oninput="recalcCosto()" style="border-color:#bfdbfe"></div>
+    </div>
   `;
   lista.appendChild(div);
   recalcCosto();
@@ -2180,7 +2281,14 @@ function addEmpaque(nombre='', gramos='', bolsa='', sticker='') {
 function getEmpaques() {
   return Array.from(document.querySelectorAll('#co-empaques-lista > div[id]')).map(div=>{
     const inputs = div.querySelectorAll('input');
-    return {nombre:inputs[0]?.value||'', gramos:parseFloat(inputs[1]?.value)||0, bolsa:parseFloat(inputs[2]?.value)||0, sticker:parseFloat(inputs[3]?.value)||0};
+    return {
+      nombre: inputs[0]?.value||'',
+      gramos: parseFloat(inputs[1]?.value)||0,
+      bolsa: parseFloat(inputs[2]?.value)||0,
+      sticker: parseFloat(inputs[3]?.value)||0,
+      precio_publico: parseFloat(inputs[4]?.value)||0,
+      precio_mayoreo: parseFloat(inputs[5]?.value)||0,
+    };
   }).filter(e=>e.nombre);
 }
 
@@ -2228,7 +2336,7 @@ function abrirFicha(id) {
     document.getElementById('co-costo-total').value = f.costo_total||'';
     document.getElementById('co-merma').value = f.merma||13;
     document.getElementById('co-notas').value = f.notas||'';
-    (f.empaques||[]).forEach(e=>addEmpaque(e.nombre, e.gramos, e.bolsa, e.sticker));
+    (f.empaques||[]).forEach(e=>addEmpaque(e.nombre, e.gramos, e.bolsa, e.sticker, e.precio_publico, e.precio_mayoreo));
   } else {
     ['co-nombre','co-origen','co-tipo','co-kg','co-costo-total','co-notas'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('co-merma').value = 13;
@@ -2295,29 +2403,37 @@ function verFichaTecnica(id) {
         </div>
       </div>
     </div>
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Tabla de costos por formato</div>
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:8px">Tabla de costos y precios por formato</div>
     <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem">
         <thead>
           <tr style="background:#f5f5f5">
-            <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #eee">Formato</th>
-            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Gramos</th>
-            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Costo granos</th>
-            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Bolsa</th>
-            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Sticker</th>
-            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee">Gastos fijos</th>
-            <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #eee;background:#fffbe6">Total</th>
+            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #eee">Formato</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee">Granos</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee">Empaque</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee">G.Fijos</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee;background:#fffbe6">Costo</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee;background:#f0fdf4;color:#166534">P.Público</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee;background:#f0fdf4;color:#166534">Margen</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee;background:#f0fdf4;color:#166534">Ganancia</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee;background:#eff6ff;color:#1d4ed8">P.Mayoreo</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee;background:#eff6ff;color:#1d4ed8">Margen</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #eee;background:#eff6ff;color:#1d4ed8">Ganancia</th>
           </tr>
         </thead>
         <tbody>
           ${r.empaques.map(e=>`<tr style="border-bottom:1px solid #f5f5f5">
-            <td style="padding:8px 12px;font-weight:600">${e.nombre}</td>
-            <td style="padding:8px 12px;text-align:right;color:#777">${e.gramos}g</td>
-            <td style="padding:8px 12px;text-align:right">${$m(e.costoGranos)}</td>
-            <td style="padding:8px 12px;text-align:right">${$m(e.bolsa)}</td>
-            <td style="padding:8px 12px;text-align:right">${$m(e.sticker)}</td>
-            <td style="padding:8px 12px;text-align:right">${$m(e.costoFijo)}</td>
-            <td style="padding:8px 12px;text-align:right;font-weight:700;background:#fffbe6">${$m(e.costoUnitario)}</td>
+            <td style="padding:8px 10px;font-weight:600">${e.nombre}</td>
+            <td style="padding:8px 10px;text-align:right">${$m(e.costoGranos)}</td>
+            <td style="padding:8px 10px;text-align:right">${$m(e.costoEmpaque)}</td>
+            <td style="padding:8px 10px;text-align:right">${$m(e.costoFijo)}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:700;background:#fffbe6">${$m(e.costoUnitario)}</td>
+            <td style="padding:8px 10px;text-align:right;background:#f0fdf4">${e.precio_publico>0?$m(e.precio_publico):'-'}</td>
+            <td style="padding:8px 10px;text-align:right;background:#f0fdf4;font-weight:600;color:${e.margenPublico>0?'#16a34a':'#dc2626'}">${e.margenPublico!==null?(e.margenPublico*100).toFixed(1)+'%':'-'}</td>
+            <td style="padding:8px 10px;text-align:right;background:#f0fdf4;font-weight:600">${e.gananciaPublico!==null?$m(e.gananciaPublico):'-'}</td>
+            <td style="padding:8px 10px;text-align:right;background:#eff6ff">${e.precio_mayoreo>0?$m(e.precio_mayoreo):'-'}</td>
+            <td style="padding:8px 10px;text-align:right;background:#eff6ff;font-weight:600;color:${e.margenMayoreo>0?'#1d4ed8':'#dc2626'}">${e.margenMayoreo!==null?(e.margenMayoreo*100).toFixed(1)+'%':'-'}</td>
+            <td style="padding:8px 10px;text-align:right;background:#eff6ff;font-weight:600">${e.gananciaMayoreo!==null?$m(e.gananciaMayoreo):'-'}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -2384,6 +2500,293 @@ async function renderCostos() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ─── EGRESOS ──────────────────────────────────────────────────────────────────
+let D_egresos = [];
+let _editEgresoId = null;
+let filtEgresos = 'todos';
+
+function fegresos(f, btn) {
+  filtEgresos = f;
+  document.querySelectorAll('#sec-egresos .fbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderEgresos();
+}
+
+function abrirEgreso(id) {
+  _editEgresoId = id||null;
+  document.getElementById('m-egreso-titulo').textContent = id ? 'Editar egreso' : 'Nuevo egreso';
+  document.getElementById('m-egreso-btn').textContent = id ? 'Guardar cambios' : 'Guardar egreso';
+  if(id) {
+    const e = D_egresos.find(x=>x.id===id);
+    if(!e) return;
+    document.getElementById('eg-fecha').value = e.fecha ? e.fecha.slice(0,10) : hoy();
+    document.getElementById('eg-tipo').value = e.tipo||'Variable';
+    document.getElementById('eg-categoria').value = e.categoria||'Operación';
+    document.getElementById('eg-subcategoria').value = e.subcategoria||'';
+    document.getElementById('eg-descripcion').value = e.descripcion||'';
+    document.getElementById('eg-total').value = e.total||'';
+    document.getElementById('eg-metodo').value = e.metodo||'Transferencia';
+    document.getElementById('eg-proveedor').value = e.proveedor||'';
+    document.getElementById('eg-obs').value = e.observaciones||'';
+  } else {
+    document.getElementById('eg-fecha').value = hoy();
+    document.getElementById('eg-tipo').value = 'Variable';
+    document.getElementById('eg-categoria').value = 'Operación';
+    document.getElementById('eg-subcategoria').value = '';
+    document.getElementById('eg-descripcion').value = '';
+    document.getElementById('eg-total').value = '';
+    document.getElementById('eg-metodo').value = 'Transferencia';
+    document.getElementById('eg-proveedor').value = '';
+    document.getElementById('eg-obs').value = '';
+  }
+  openModal('m-egreso');
+}
+
+async function guardarEgreso() {
+  const fecha = document.getElementById('eg-fecha').value;
+  const total = parseFloat(document.getElementById('eg-total').value)||0;
+  if(!fecha || !total) return alert('Ingresa fecha y total');
+  const data = {
+    fecha, tipo: document.getElementById('eg-tipo').value,
+    categoria: document.getElementById('eg-categoria').value,
+    subcategoria: document.getElementById('eg-subcategoria').value,
+    descripcion: document.getElementById('eg-descripcion').value,
+    total, metodo: document.getElementById('eg-metodo').value,
+    proveedor: document.getElementById('eg-proveedor').value,
+    observaciones: document.getElementById('eg-obs').value,
+  };
+  let r;
+  if(_editEgresoId) {
+    r = await api('PUT',`/api/egresos/${_editEgresoId}`, data);
+    const idx = D_egresos.findIndex(x=>x.id===_editEgresoId);
+    if(idx>=0) D_egresos[idx]=r;
+  } else {
+    r = await api('POST','/api/egresos', data);
+    D_egresos.push(r);
+  }
+  closeModal('m-egreso');
+  renderEgresos();
+  // refrescar resultados si está activo
+  if(document.getElementById('sec-resultados').classList.contains('on')) renderResultados();
+}
+
+async function eliminarEgreso(id) {
+  if(!confirm('¿Eliminar este egreso?')) return;
+  await api('DELETE',`/api/egresos/${id}`);
+  D_egresos = D_egresos.filter(x=>x.id!==id);
+  renderEgresos();
+}
+
+async function renderEgresos() {
+  if(!D_egresos.length) {
+    try { D_egresos = await api('GET','/api/egresos'); } catch(e){ D_egresos=[]; }
+  }
+  const lista = document.getElementById('lista-egresos');
+  if(!lista) return;
+
+  let base = filtEgresos==='todos' ? D_egresos : D_egresos.filter(e=>e.tipo===filtEgresos);
+  const totalMes = D_egresos.reduce((a,e)=>a+(parseFloat(e.total)||0),0);
+  const totalFiltro = base.reduce((a,e)=>a+(parseFloat(e.total)||0),0);
+
+  document.getElementById('egresos-stats').innerHTML = `
+    <div class="stat"><div class="stat-val">${$m(totalMes)}</div><div class="stat-lbl">Total egresos</div></div>
+    <div class="stat"><div class="stat-val">${D_egresos.filter(e=>e.tipo==='Fijo').length}</div><div class="stat-lbl">Gastos fijos</div></div>
+    <div class="stat"><div class="stat-val">${D_egresos.filter(e=>e.tipo==='Variable').length}</div><div class="stat-lbl">Gastos variables</div></div>
+    <div class="stat"><div class="stat-val">${$m(totalFiltro)}</div><div class="stat-lbl">Total ${filtEgresos==='todos'?'mostrado':filtEgresos.toLowerCase()}</div></div>
+  `;
+
+  if(!base.length) { lista.innerHTML=`<div style="text-align:center;padding:60px;color:#aaa">Sin egresos registrados.</div>`; return; }
+
+  // Agrupar por mes
+  const porMes = {};
+  base.forEach(e=>{
+    const mes = (e.fecha||'').slice(0,7);
+    if(!porMes[mes]) porMes[mes]=[];
+    porMes[mes].push(e);
+  });
+
+  lista.innerHTML = Object.keys(porMes).sort().reverse().map(mes=>{
+    const items = porMes[mes];
+    const totalMesLocal = items.reduce((a,e)=>a+(parseFloat(e.total)||0),0);
+    return `<div style="margin-bottom:20px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#aaa;margin-bottom:8px;display:flex;justify-content:space-between">
+        <span>${mes}</span><span style="color:#555">${$m(totalMesLocal)}</span>
+      </div>
+      ${items.map(e=>`<div class="item">
+        <div class="item-info" style="flex:1">
+          <div class="item-title">${e.descripcion||e.subcategoria||e.categoria||'-'}</div>
+          <div class="item-sub">${[e.categoria, e.subcategoria].filter(Boolean).join(' › ')} · ${fmt(e.fecha)} · ${e.metodo||''} · ${e.proveedor||''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="text-align:right">
+            <div style="font-size:.75rem;color:#aaa">${e.tipo||''}</div>
+            <div style="font-size:1rem;font-weight:700;color:${e.tipo==='Fijo'?'#7c3aed':'#c0392b'}">${$m(e.total)}</div>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="abrirEgreso(${e.id})">Editar</button>
+          <button class="btn btn-sm" style="background:#fde8e8;color:#c0392b;border-color:#f5c0c0" onclick="eliminarEgreso(${e.id})">&#x2715;</button>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ─── RESULTADOS DEL MES ────────────────────────────────────────────────────────
+async function renderResultados() {
+  // Asegurar datos cargados
+  if(!D_egresos.length)       { try { D_egresos       = await api('GET','/api/egresos'); }       catch(e){ D_egresos=[]; } }
+  if(!D_gastos_fijos.length)  { try { D_gastos_fijos  = await api('GET','/api/gastos-fijos'); }  catch(e){ D_gastos_fijos=[]; } }
+  if(!D.pedidos)              { try { D.pedidos        = await api('GET','/api/pedidos'); }        catch(e){ D.pedidos=[]; } }
+
+  // Mes seleccionado
+  const mesInput = document.getElementById('res-mes');
+  if(!mesInput) return;
+  if(!mesInput.value) {
+    mesInput.value = new Date().toISOString().slice(0,7);
+  }
+  const mes = mesInput.value; // YYYY-MM
+
+  // Ingresos del mes: pedidos entregados/completados en ese mes
+  const pedidosMes = (D.pedidos||[]).filter(p=>{
+    const f = (p.fecha||'').slice(0,7);
+    return f === mes && (p.estado==='entregado'||p.estado==='pagado'||p.estado==='completado');
+  });
+  const ingresos = pedidosMes.reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+
+  // Egresos variables del mes
+  const egresosMes = D_egresos.filter(e=>(e.fecha||'').slice(0,7)===mes);
+  const totalEgresos = egresosMes.reduce((a,e)=>a+(parseFloat(e.total)||0),0);
+
+  // Gastos fijos del mes
+  const gfMes = D_gastos_fijos.find(g=>g.mes===mes) || D_gastos_fijos[0] || null;
+  const gfCalc = gfMes ? calcGF(gfMes) : null;
+  const totalGF = gfCalc ? gfCalc.totalGastos : 0;
+
+  // Ganancia neta
+  const ganancia = ingresos - totalEgresos - totalGF;
+  const margen = ingresos > 0 ? ganancia/ingresos : 0;
+
+  const cards = document.getElementById('resultados-cards');
+  const colorGanancia = ganancia >= 0 ? '#16a34a' : '#dc2626';
+  cards.innerHTML = `
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:20px;text-align:center">
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#166534;margin-bottom:8px">Ingresos del mes</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#15803d">${$m(ingresos)}</div>
+      <div style="font-size:.75rem;color:#6b7280;margin-top:4px">${pedidosMes.length} pedidos</div>
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:20px;text-align:center">
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#991b1b;margin-bottom:8px">Egresos variables</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#dc2626">${$m(totalEgresos)}</div>
+      <div style="font-size:.75rem;color:#6b7280;margin-top:4px">${egresosMes.length} registros</div>
+    </div>
+    <div style="background:#fffbe6;border:1px solid #fde68a;border-radius:14px;padding:20px;text-align:center">
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#92400e;margin-bottom:8px">Gastos fijos</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#d97706">${$m(totalGF)}</div>
+      <div style="font-size:.75rem;color:#6b7280;margin-top:4px">${gfMes ? gfMes.mes : 'Sin configurar'}</div>
+    </div>
+    <div style="background:#f8f8f8;border:2px solid ${ganancia>=0?'#bbf7d0':'#fecaca'};border-radius:14px;padding:20px;text-align:center">
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#374151;margin-bottom:8px">Ganancia neta</div>
+      <div style="font-size:1.6rem;font-weight:800;color:${colorGanancia}">${$m(ganancia)}</div>
+      <div style="font-size:.75rem;color:#6b7280;margin-top:4px">Margen: ${(margen*100).toFixed(1)}%</div>
+    </div>
+  `;
+
+  const body = document.getElementById('resultados-body');
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <!-- Desglose egresos variables -->
+      <div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;padding:16px">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:12px">Egresos variables — ${mes}</div>
+        ${egresosMes.length ? `
+          <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+            <thead><tr style="border-bottom:1px solid #f0f0f0;color:#aaa;font-size:.7rem">
+              <th style="text-align:left;padding:4px 6px">Categoría</th>
+              <th style="text-align:left;padding:4px 6px">Descripción</th>
+              <th style="text-align:right;padding:4px 6px">Total</th>
+            </tr></thead>
+            <tbody>${egresosMes.map(e=>`<tr style="border-bottom:1px solid #f9f9f9">
+              <td style="padding:5px 6px;color:#777">${e.categoria||'-'}</td>
+              <td style="padding:5px 6px">${e.descripcion||e.subcategoria||'-'}</td>
+              <td style="padding:5px 6px;text-align:right;font-weight:600">${$m(e.total)}</td>
+            </tr>`).join('')}</tbody>
+            <tfoot><tr style="border-top:2px solid #f0f0f0">
+              <td colspan="2" style="padding:6px;font-weight:700">Total</td>
+              <td style="padding:6px;text-align:right;font-weight:700;color:#dc2626">${$m(totalEgresos)}</td>
+            </tfoot>
+          </table>` : `<div style="color:#aaa;text-align:center;padding:20px;font-size:.82rem">Sin egresos este mes</div>`}
+        <button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="go('egresos')">Ver todos los egresos</button>
+      </div>
+
+      <!-- Gastos fijos desglose -->
+      <div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;padding:16px">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:12px">Gastos fijos — ${gfMes?gfMes.mes:'no configurado'}</div>
+        ${gfCalc ? `
+          <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+            <tbody>
+              <tr style="border-bottom:1px solid #f9f9f9">
+                <td style="padding:5px 6px;color:#777">Sueldos</td>
+                <td style="padding:5px 6px;text-align:right;font-weight:600">${$m(gfCalc.totalSueldos)}</td>
+              </tr>
+              ${(gfMes.otros_gastos||[]).map(g=>`<tr style="border-bottom:1px solid #f9f9f9">
+                <td style="padding:5px 6px;color:#777">${g.concepto}</td>
+                <td style="padding:5px 6px;text-align:right;font-weight:600">${$m(g.monto)}</td>
+              </tr>`).join('')}
+            </tbody>
+            <tfoot><tr style="border-top:2px solid #f0f0f0">
+              <td style="padding:6px;font-weight:700">Total</td>
+              <td style="padding:6px;text-align:right;font-weight:700;color:#d97706">${$m(gfCalc.totalGastos)}</td>
+            </tfoot>
+          </table>
+          <div style="background:#fffbe6;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:.78rem;color:#92400e">
+            Producción: ${gfCalc.prodKg} kg · Costo fijo/kg: ${$m(gfCalc.costoKg)} · <b>Costo fijo/100g: ${$m(gfCalc.costo100g)}</b>
+          </div>` : `<div style="color:#aaa;text-align:center;padding:20px;font-size:.82rem">Sin gastos fijos configurados
+            <br><button class="btn btn-sm btn-dark" style="margin-top:8px" onclick="abrirGastosFijos()">Configurar</button></div>`}
+        ${gfMes ? `<button class="btn btn-sm btn-outline" style="width:100%;margin-top:10px" onclick="abrirGastosFijos(${gfMes.id})">Editar gastos fijos</button>` : ''}
+      </div>
+    </div>
+
+    <!-- Pedidos del mes -->
+    <div style="background:#fff;border:1px solid #f0f0f0;border-radius:12px;padding:16px;margin-bottom:20px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:12px">Pedidos entregados — ${mes}</div>
+      ${pedidosMes.length ? `
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+            <thead><tr style="border-bottom:1px solid #f0f0f0;color:#aaa;font-size:.7rem">
+              <th style="text-align:left;padding:4px 8px">Cliente</th>
+              <th style="text-align:left;padding:4px 8px">Fecha</th>
+              <th style="text-align:right;padding:4px 8px">Total</th>
+            </tr></thead>
+            <tbody>${pedidosMes.map(p=>`<tr style="border-bottom:1px solid #f9f9f9">
+              <td style="padding:6px 8px">${p.cliente_nombre||p.cliente_id||'-'}</td>
+              <td style="padding:6px 8px;color:#777">${fmt(p.fecha)}</td>
+              <td style="padding:6px 8px;text-align:right;font-weight:600">${$m(p.total)}</td>
+            </tr>`).join('')}</tbody>
+            <tfoot><tr style="border-top:2px solid #f0f0f0">
+              <td colspan="2" style="padding:6px;font-weight:700">Total ingresos</td>
+              <td style="padding:6px;text-align:right;font-weight:700;color:#15803d">${$m(ingresos)}</td>
+            </tfoot>
+          </table>
+        </div>` : `<div style="color:#aaa;text-align:center;padding:20px;font-size:.82rem">Sin pedidos entregados este mes</div>`}
+    </div>
+
+    <!-- Resumen balance -->
+    <div style="background:linear-gradient(135deg,${ganancia>=0?'#f0fdf4,#dcfce7':'#fef2f2,#fee2e2'});border:1px solid ${ganancia>=0?'#86efac':'#fca5a5'};border-radius:12px;padding:20px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#374151;margin-bottom:14px">Balance del mes — ${mes}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:.88rem">
+        <tbody>
+          <tr><td style="padding:6px 0;color:#555">Ingresos (ventas)</td><td style="text-align:right;font-weight:600;color:#15803d">+ ${$m(ingresos)}</td></tr>
+          <tr><td style="padding:6px 0;color:#555">Egresos variables</td><td style="text-align:right;font-weight:600;color:#dc2626">− ${$m(totalEgresos)}</td></tr>
+          <tr><td style="padding:6px 0;color:#555">Gastos fijos</td><td style="text-align:right;font-weight:600;color:#d97706">− ${$m(totalGF)}</td></tr>
+          <tr style="border-top:2px solid rgba(0,0,0,.1)">
+            <td style="padding:10px 0 0;font-weight:700;font-size:1rem">Ganancia neta</td>
+            <td style="text-align:right;font-weight:800;font-size:1.2rem;color:${colorGanancia};padding-top:10px">${$m(ganancia)}</td>
+          </tr>
+          <tr><td colspan="2" style="text-align:right;font-size:.78rem;color:#6b7280">Margen: ${(margen*100).toFixed(1)}%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 // ─── PAGOS ─────────────────────────────────────────────────────────────────────

@@ -621,6 +621,45 @@ app.delete('/api/entregas-sucursal/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── EGRESOS ─────────────────────────────────────────────────────────────────
+app.get('/api/egresos', auth, async (req, res) => {
+  await pool.query(`CREATE TABLE IF NOT EXISTS ct_egresos (
+    id SERIAL PRIMARY KEY,
+    fecha DATE NOT NULL,
+    tipo VARCHAR(20) DEFAULT 'Variable',
+    categoria VARCHAR(100),
+    subcategoria VARCHAR(100),
+    descripcion TEXT,
+    total NUMERIC DEFAULT 0,
+    metodo VARCHAR(50),
+    proveedor VARCHAR(200),
+    observaciones TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  const r = await pool.query('SELECT * FROM ct_egresos ORDER BY fecha DESC');
+  res.json(r.rows);
+});
+app.post('/api/egresos', auth, async (req, res) => {
+  const { fecha, tipo, categoria, subcategoria, descripcion, total, metodo, proveedor, observaciones } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_egresos (fecha,tipo,categoria,subcategoria,descripcion,total,metodo,proveedor,observaciones) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+    [fecha, tipo||'Variable', categoria||null, subcategoria||null, descripcion||null, total||0, metodo||null, proveedor||null, observaciones||null]
+  );
+  res.json(r.rows[0]);
+});
+app.put('/api/egresos/:id', auth, async (req, res) => {
+  const { fecha, tipo, categoria, subcategoria, descripcion, total, metodo, proveedor, observaciones } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_egresos SET fecha=$1,tipo=$2,categoria=$3,subcategoria=$4,descripcion=$5,total=$6,metodo=$7,proveedor=$8,observaciones=$9 WHERE id=$10 RETURNING *',
+    [fecha, tipo||'Variable', categoria||null, subcategoria||null, descripcion||null, total||0, metodo||null, proveedor||null, observaciones||null, req.params.id]
+  );
+  res.json(r.rows[0]);
+});
+app.delete('/api/egresos/:id', auth, async (req, res) => {
+  await pool.query('DELETE FROM ct_egresos WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
 // ─── GASTOS FIJOS ────────────────────────────────────────────────────────────
 app.get('/api/gastos-fijos', auth, async (req, res) => {
   await pool.query(`CREATE TABLE IF NOT EXISTS ct_gastos_fijos (
