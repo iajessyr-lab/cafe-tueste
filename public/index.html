@@ -719,7 +719,10 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <div id="ent-items-lista"></div>
       <button class="btn btn-outline" style="width:100%;margin-top:6px" onclick="addEntregaItem()">+ Agregar producto</button>
     </div>
-    <div class="fl"><label>Notas</label><input id="ent-notas" type="text" placeholder="Instrucciones especiales..."></div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Costo total ($)</label><input id="ent-costo" type="number" step="0.01" placeholder="ej. 4500.00"></div>
+      <div class="fl"><label>Notas</label><input id="ent-notas" type="text" placeholder="Instrucciones especiales..."></div>
+    </div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-entrega')">Cancelar</button>
@@ -3088,6 +3091,7 @@ function getEntregaItems() {
 function resetEntregaForm() {
   document.getElementById('ent-items-lista').innerHTML='';
   document.getElementById('ent-fecha').value=hoy();
+  document.getElementById('ent-costo').value='';
   document.getElementById('ent-notas').value='';
   document.getElementById('m-entrega-titulo').textContent='Nueva entrega';
   document.getElementById('m-entrega-btn').textContent='Guardar';
@@ -3118,8 +3122,8 @@ function renderCalendario(sucursalId, entregas) {
   const hoy = new Date(); hoy.setHours(12,0,0,0);
   const proximas = entregas.filter(e=>new Date(e.fecha.slice(0,10)+'T12:00:00') >= hoy).slice(0,12);
   const pasadas  = entregas.filter(e=>new Date(e.fecha.slice(0,10)+'T12:00:00') <  hoy).reverse().slice(0,6);
-  const estadoBadge = {programada:'b-yellow',entregada:'b-green',cancelada:'b-gray'};
-  const estadoLabel = {programada:'Programada',entregada:'Entregada',cancelada:'Cancelada'};
+  const estadoBadge = {programada:'b-yellow',entregada:'b-green',cancelada:'b-gray',pagada:'b-dark'};
+  const estadoLabel = {programada:'Programada',entregada:'Entregada',cancelada:'Cancelada',pagada:'Pagada'};
 
   const renderItems = items => {
     if(!items||!items.length) return '';
@@ -3134,20 +3138,28 @@ function renderCalendario(sucursalId, entregas) {
     const items = e.items||[];
     const kgTotal = items.reduce((a,i)=>a+(i.kg||0),0);
     const bolsasTotal = items.reduce((a,i)=>a+(i.bolsas||0),0);
+    const costo = parseFloat(e.costo||0);
+    const pagado = parseFloat(e.monto_pagado||0);
+    const pendiente = costo > 0 ? costo - pagado : 0;
+    const esPagada = e.estado === 'pagada' || (costo > 0 && pagado >= costo);
+    const badgeKey = esPagada ? 'pagada' : (e.estado||'programada');
     return `<div class="row" style="margin-bottom:10px">
       <div class="row-top">
         <div class="row-title">${fmt(e.fecha)}</div>
-        <span class="badge ${estadoBadge[e.estado]||'b-gray'}">${estadoLabel[e.estado]||e.estado}</span>
+        <span class="badge ${estadoBadge[badgeKey]||'b-gray'}">${estadoLabel[badgeKey]||e.estado}</span>
       </div>
       ${renderItems(items)}
       <div class="row-meta" style="margin-top:6px">
         ${kgTotal?`<span>${kgTotal.toFixed(1)} kg total</span>`:''}
         ${bolsasTotal?`<span>${bolsasTotal} bolsas</span>`:''}
+        ${costo>0?`<span style="font-weight:600">Costo: ${$m(costo)}</span>`:''}
+        ${costo>0&&!esPagada&&pagado>0?`<span style="color:#d97706">Pagado: ${$m(pagado)} · Pendiente: ${$m(pendiente)}</span>`:''}
         ${e.notas?`<span>${e.notas}</span>`:''}
       </div>
       <div class="row-actions">
         ${e.estado==='programada'?`<button class="btn btn-sm btn-sm-green" onclick="marcarEntregada(${e.id})">Marcar entregada</button>`:''}
-        <button class="btn btn-sm" onclick="abrirEditarEntrega(${e.id})">Editar</button>
+        ${(e.estado==='entregada'||e.estado==='programada')&&!esPagada?`<button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0" onclick="abrirPagoEntrega(${e.id})">💰 Registrar pago</button>`:''}
+        <button class="btn btn-sm btn-outline" onclick="abrirEditarEntrega(${e.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminarEntrega(${e.id})">Eliminar</button>
       </div>
     </div>`;
@@ -3175,6 +3187,7 @@ function abrirEditarEntrega(id) {
   document.getElementById('m-entrega-titulo').textContent = 'Editar entrega';
   document.getElementById('ent-sucursal').value = e.sucursal_id;
   document.getElementById('ent-fecha').value = e.fecha ? e.fecha.slice(0,10) : '';
+  document.getElementById('ent-costo').value = e.costo||'';
   document.getElementById('ent-notas').value = e.notas||'';
   (e.items||[]).forEach(i=>addEntregaItem(i.nombre, i.kg, i.bolsas));
   document.getElementById('m-entrega-btn').textContent = 'Guardar cambios';
@@ -3188,9 +3201,12 @@ async function guardarEntrega() {
   const items = getEntregaItems();
   const kg_total = items.reduce((a,i)=>a+(i.kg||0),0)||null;
   const productos = items.map(i=>`${i.nombre}${i.kg?' · '+i.kg+'kg':''}${i.bolsas?' · '+i.bolsas+' bolsas':''}`).join(', ');
-  const body = { fecha, kg_total, productos, notas: document.getElementById('ent-notas').value.trim(), items };
+  const costo = parseFloat(document.getElementById('ent-costo').value)||null;
+  const body = { fecha, kg_total, productos, notas: document.getElementById('ent-notas').value.trim(), items, costo };
   if(_editEntregaId) {
-    const n = await api('PUT', `/api/entregas-sucursal/${_editEntregaId}`, {...body, estado:'programada'});
+    const todas = Object.values(D_entregas).flat();
+    const prev = todas.find(x=>x.id===_editEntregaId)||{};
+    const n = await api('PUT', `/api/entregas-sucursal/${_editEntregaId}`, {...body, estado: prev.estado||'programada', monto_pagado: prev.monto_pagado||0});
     const sid = n.sucursal_id;
     if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===_editEntregaId); if(i>=0) D_entregas[sid][i]=n; }
   } else {
@@ -3208,10 +3224,31 @@ async function marcarEntregada(id) {
   const todas = Object.values(D_entregas).flat();
   const e = todas.find(x=>x.id===id);
   if(!e) return;
-  const n = await api('PUT', `/api/entregas-sucursal/${id}`, {...e, estado:'entregada'});
+  const n = await api('PUT', `/api/entregas-sucursal/${id}`, {...e, items: e.items||[], estado:'entregada'});
   const sid = n.sucursal_id;
   if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===id); if(i>=0) D_entregas[sid][i]=n; }
   renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
+}
+
+function abrirPagoEntrega(id) {
+  const todas = Object.values(D_entregas).flat();
+  const e = todas.find(x=>x.id===id);
+  if(!e) return;
+  const costo = parseFloat(e.costo||0);
+  const pagado = parseFloat(e.monto_pagado||0);
+  const pendiente = costo > 0 ? costo - pagado : 0;
+  const monto = prompt(`Registrar pago para entrega del ${fmt(e.fecha)}\n\nCosto total: ${$m(costo)}\nYa pagado: ${$m(pagado)}\nPendiente: ${$m(pendiente)}\n\nMonto a registrar ($):`);
+  if (monto === null) return;
+  const montoNum = parseFloat(monto)||0;
+  if (montoNum <= 0) return alert('Ingresa un monto válido.');
+  const nuevoPagado = pagado + montoNum;
+  const nuevoEstado = (costo > 0 && nuevoPagado >= costo) ? 'pagada' : 'entregada';
+  api('PUT', `/api/entregas-sucursal/${id}`, {...e, items: e.items||[], monto_pagado: nuevoPagado, estado: nuevoEstado})
+    .then(n => {
+      const sid = n.sucursal_id;
+      if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===id); if(i>=0) D_entregas[sid][i]=n; }
+      renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
+    }).catch(e=>alert(e.message));
 }
 
 async function eliminarEntrega(id) {

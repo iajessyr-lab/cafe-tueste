@@ -623,6 +623,8 @@ app.put('/api/sucursales/:id', auth, async (req, res) => {
 // ─── ENTREGAS SUCURSAL ────────────────────────────────────────────────────────
 app.get('/api/sucursales/:id/entregas', auth, async (req, res) => {
   await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'");
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS costo NUMERIC(12,2)");
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS monto_pagado NUMERIC(12,2) DEFAULT 0");
   const r = await pool.query(
     'SELECT * FROM ct_entregas_sucursal WHERE sucursal_id=$1 ORDER BY fecha ASC',
     [req.params.id]
@@ -630,18 +632,18 @@ app.get('/api/sucursales/:id/entregas', auth, async (req, res) => {
   res.json(r.rows);
 });
 app.post('/api/sucursales/:id/entregas', auth, async (req, res) => {
-  const { fecha, productos, kg_total, notas, items } = req.body;
+  const { fecha, productos, kg_total, notas, items, costo } = req.body;
   const r = await pool.query(
-    'INSERT INTO ct_entregas_sucursal (sucursal_id,fecha,productos,kg_total,notas,items) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-    [req.params.id, fecha, productos||null, kg_total||null, notas||null, JSON.stringify(items||[])]
+    'INSERT INTO ct_entregas_sucursal (sucursal_id,fecha,productos,kg_total,notas,items,costo) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+    [req.params.id, fecha, productos||null, kg_total||null, notas||null, JSON.stringify(items||[]), costo||null]
   );
   res.json(r.rows[0]);
 });
 app.put('/api/entregas-sucursal/:id', auth, async (req, res) => {
-  const { fecha, productos, kg_total, estado, notas, items } = req.body;
+  const { fecha, productos, kg_total, estado, notas, items, costo, monto_pagado } = req.body;
   const r = await pool.query(
-    'UPDATE ct_entregas_sucursal SET fecha=$1,productos=$2,kg_total=$3,estado=$4,notas=$5,items=$6 WHERE id=$7 RETURNING *',
-    [fecha, productos||null, kg_total||null, estado||'programada', notas||null, JSON.stringify(items||[]), req.params.id]
+    'UPDATE ct_entregas_sucursal SET fecha=$1,productos=$2,kg_total=$3,estado=$4,notas=$5,items=$6,costo=$7,monto_pagado=$8 WHERE id=$9 RETURNING *',
+    [fecha, productos||null, kg_total||null, estado||'programada', notas||null, JSON.stringify(items||[]), costo||null, monto_pagado||0, req.params.id]
   );
   res.json(r.rows[0]);
 });
