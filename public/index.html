@@ -3234,21 +3234,29 @@ function abrirPagoEntrega(id) {
   const todas = Object.values(D_entregas).flat();
   const e = todas.find(x=>x.id===id);
   if(!e) return;
-  const costo = parseFloat(e.costo||0);
+  let costo = parseFloat(e.costo||0);
   const pagado = parseFloat(e.monto_pagado||0);
-  const pendiente = costo > 0 ? costo - pagado : 0;
-  const monto = prompt(`Registrar pago para entrega del ${fmt(e.fecha)}\n\nCosto total: ${$m(costo)}\nYa pagado: ${$m(pagado)}\nPendiente: ${$m(pendiente)}\n\nMonto a registrar ($):`);
+
+  if (costo === 0) {
+    const c = prompt(`Entrega del ${fmt(e.fecha)}\n\n¿Cuál es el costo total de esta entrega? ($)`);
+    if (c === null) return;
+    costo = parseFloat(c)||0;
+    if (costo <= 0) return alert('Ingresa un costo válido.');
+  }
+
+  const pendiente = costo - pagado;
+  const monto = prompt(`Entrega del ${fmt(e.fecha)}\n\nCosto total: ${$m(costo)}\nYa pagado: ${$m(pagado)}\nPendiente: ${$m(pendiente)}\n\nMonto a registrar ($):`);
   if (monto === null) return;
   const montoNum = parseFloat(monto)||0;
   if (montoNum <= 0) return alert('Ingresa un monto válido.');
   const nuevoPagado = pagado + montoNum;
-  const nuevoEstado = (costo > 0 && nuevoPagado >= costo) ? 'pagada' : 'entregada';
-  api('PUT', `/api/entregas-sucursal/${id}`, {...e, items: e.items||[], monto_pagado: nuevoPagado, estado: nuevoEstado})
+  const nuevoEstado = nuevoPagado >= costo ? 'pagada' : 'entregada';
+  api('PUT', `/api/entregas-sucursal/${id}`, {...e, items: e.items||[], costo, monto_pagado: nuevoPagado, estado: nuevoEstado})
     .then(n => {
       const sid = n.sucursal_id;
       if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===id); if(i>=0) D_entregas[sid][i]=n; }
       renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
-    }).catch(e=>alert(e.message));
+    }).catch(err=>alert(err.message));
 }
 
 async function eliminarEntrega(id) {
