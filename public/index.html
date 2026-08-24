@@ -755,6 +755,21 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
 </div></div>
 
+<!-- MODAL NOTA ENTREGA -->
+<div class="overlay" id="m-nota-entrega"><div class="modal" style="max-width:480px">
+  <div class="modal-head"><h3>Nota de entrega</h3><button class="modal-close" onclick="closeModal('m-nota-entrega')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="fl">
+      <label>Nota</label>
+      <textarea id="nota-entrega-txt" rows="5" placeholder="Escribe observaciones, instrucciones o cualquier detalle relevante de esta entrega..." style="resize:vertical"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-nota-entrega')">Cancelar</button>
+    <button class="btn btn-dark" onclick="guardarNotaEntrega()">Guardar nota</button>
+  </div>
+</div></div>
+
 <!-- MODAL EGRESO -->
 <div class="overlay" id="m-egreso"><div class="modal" style="max-width:600px">
   <div class="modal-head"><h3 id="m-egreso-titulo">Nuevo egreso</h3><button class="modal-close" onclick="closeModal('m-egreso')">&#x2715;</button></div>
@@ -3179,12 +3194,13 @@ function renderCalendario(sucursalId, entregas) {
         ${bolsasTotal?`<span>${bolsasTotal} bolsas</span>`:''}
         ${costo>0?`<span style="font-weight:600">Costo: ${$m(costo)}</span>`:''}
         ${costo>0&&!esPagada&&pagado>0?`<span style="color:#d97706">Pagado: ${$m(pagado)} · Pendiente: ${$m(pendiente)}</span>`:''}
-        ${e.notas?`<span>${e.notas}</span>`:''}
+        ${e.notas?`<span style="font-style:italic;color:#666">📝 ${e.notas}</span>`:''}
       </div>
       <div class="row-actions">
         ${e.estado==='programada'?`<button class="btn btn-sm btn-sm-green" onclick="marcarEntregada(${e.id})">Marcar entregada</button>`:''}
         ${(e.estado==='entregada'||e.estado==='programada')&&!esPagada?`<button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0" onclick="abrirPagoEntrega(${e.id})">💰 Registrar pago</button>`:''}
         ${e.comprobante_nombre?`<button class="btn btn-sm btn-outline" onclick="verComprobante(${e.id},'${(e.comprobante_mime||'').startsWith('image')?'img':'pdf'}')">📎 Ver comprobante</button>`:`<button class="btn btn-sm btn-outline" onclick="subirComprobante(${e.id})">📎 Agregar comprobante</button>`}
+        <button class="btn btn-sm btn-outline" onclick="abrirNotaEntrega(${e.id})" title="${e.notas||''}">${e.notas?'📝 Ver nota':'📝 Nota'}</button>
         <button class="btn btn-sm btn-outline" onclick="abrirEditarEntrega(${e.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminarEntrega(${e.id})">Eliminar</button>
       </div>
@@ -3253,6 +3269,26 @@ async function marcarEntregada(id) {
   const n = await api('PUT', `/api/entregas-sucursal/${id}`, {...e, items: e.items||[], estado:'entregada'});
   const sid = n.sucursal_id;
   if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===id); if(i>=0) D_entregas[sid][i]=n; }
+  renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
+}
+
+var _notaEntregaId = null;
+function abrirNotaEntrega(id) {
+  _notaEntregaId = id;
+  const todas = Object.values(D_entregas).flat();
+  const e = todas.find(x=>x.id===id);
+  document.getElementById('nota-entrega-txt').value = e?.notas||'';
+  openModal('m-nota-entrega');
+}
+async function guardarNotaEntrega() {
+  const todas = Object.values(D_entregas).flat();
+  const e = todas.find(x=>x.id===_notaEntregaId);
+  if(!e) return;
+  const notas = document.getElementById('nota-entrega-txt').value.trim();
+  const n = await api('PUT', `/api/entregas-sucursal/${_notaEntregaId}`, {...e, items: e.items||[], notas});
+  const sid = n.sucursal_id;
+  if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===_notaEntregaId); if(i>=0) D_entregas[sid][i]=n; }
+  closeModal('m-nota-entrega');
   renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
 }
 
