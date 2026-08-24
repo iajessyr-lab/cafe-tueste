@@ -730,6 +730,31 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   </div>
 </div></div>
 
+<!-- MODAL COMPROBANTE -->
+<div class="overlay" id="m-comprobante"><div class="modal" style="max-width:560px">
+  <div class="modal-head"><h3>Comprobante de pago</h3><button class="modal-close" onclick="closeModal('m-comprobante')">&#x2715;</button></div>
+  <div class="modal-body" style="text-align:center">
+    <div id="comp-preview" style="margin-bottom:16px;min-height:80px;display:flex;align-items:center;justify-content:center"></div>
+    <label style="display:inline-block;cursor:pointer;padding:10px 20px;background:#f4f4f4;border:1.5px dashed #ccc;border-radius:8px;font-size:.85rem;color:#555">
+      <input type="file" id="comp-file" accept="image/*,.pdf" style="display:none" onchange="previewComprobante(this)">
+      📎 Seleccionar imagen o PDF
+    </label>
+    <div id="comp-nombre" style="margin-top:8px;font-size:.78rem;color:#888"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-comprobante')">Cancelar</button>
+    <button class="btn btn-dark" id="comp-btn" onclick="guardarComprobante()">Subir comprobante</button>
+  </div>
+</div></div>
+
+<!-- MODAL COMPROBANTE VIEWER -->
+<div class="overlay" id="m-comp-view"><div class="modal" style="max-width:700px">
+  <div class="modal-head"><h3 id="m-comp-view-title">Comprobante</h3><button class="modal-close" onclick="closeModal('m-comp-view')">&#x2715;</button></div>
+  <div class="modal-body" style="text-align:center;padding:8px">
+    <div id="comp-view-content"></div>
+  </div>
+</div></div>
+
 <!-- MODAL EGRESO -->
 <div class="overlay" id="m-egreso"><div class="modal" style="max-width:600px">
   <div class="modal-head"><h3 id="m-egreso-titulo">Nuevo egreso</h3><button class="modal-close" onclick="closeModal('m-egreso')">&#x2715;</button></div>
@@ -3159,6 +3184,7 @@ function renderCalendario(sucursalId, entregas) {
       <div class="row-actions">
         ${e.estado==='programada'?`<button class="btn btn-sm btn-sm-green" onclick="marcarEntregada(${e.id})">Marcar entregada</button>`:''}
         ${(e.estado==='entregada'||e.estado==='programada')&&!esPagada?`<button class="btn btn-sm" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0" onclick="abrirPagoEntrega(${e.id})">💰 Registrar pago</button>`:''}
+        ${e.comprobante_nombre?`<button class="btn btn-sm btn-outline" onclick="verComprobante(${e.id},'${(e.comprobante_mime||'').startsWith('image')?'img':'pdf'}')">📎 Ver comprobante</button>`:`<button class="btn btn-sm btn-outline" onclick="subirComprobante(${e.id})">📎 Agregar comprobante</button>`}
         <button class="btn btn-sm btn-outline" onclick="abrirEditarEntrega(${e.id})">Editar</button>
         <button class="btn btn-sm btn-sm-red" onclick="eliminarEntrega(${e.id})">Eliminar</button>
       </div>
@@ -3228,6 +3254,68 @@ async function marcarEntregada(id) {
   const sid = n.sucursal_id;
   if(D_entregas[sid]) { const i=D_entregas[sid].findIndex(x=>x.id===id); if(i>=0) D_entregas[sid][i]=n; }
   renderCalendario(_sucursalActiva, D_entregas[_sucursalActiva]||[]);
+}
+
+var _compEntregaId = null;
+function subirComprobante(id) {
+  _compEntregaId = id;
+  document.getElementById('comp-file').value = '';
+  document.getElementById('comp-preview').innerHTML = '';
+  document.getElementById('comp-nombre').textContent = '';
+  openModal('m-comprobante');
+}
+function previewComprobante(input) {
+  const file = input.files[0]; if(!file) return;
+  document.getElementById('comp-nombre').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (file.type.startsWith('image/')) {
+      document.getElementById('comp-preview').innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:300px;border-radius:8px;border:1px solid #eee">`;
+    } else {
+      document.getElementById('comp-preview').innerHTML = `<div style="font-size:3rem">📄</div><div style="font-size:.85rem;color:#555">${file.name}</div>`;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+async function guardarComprobante() {
+  const file = document.getElementById('comp-file').files[0];
+  if (!file) return alert('Selecciona un archivo.');
+  if (file.size > 5*1024*1024) return alert('El archivo no debe superar 5 MB.');
+  const btn = document.getElementById('comp-btn');
+  btn.textContent = 'Subiendo...'; btn.disabled = true;
+  try {
+    const fd = new FormData(); fd.append('file', file);
+    const r = await fetch(`/api/entregas-sucursal/${_compEntregaId}/comprobante`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    // Actualizar el objeto local
+    const sid = _sucursalActiva;
+    const idx = (D_entregas[sid]||[]).findIndex(x=>x.id===_compEntregaId);
+    if (idx >= 0) { D_entregas[sid][idx].comprobante_nombre = data.comprobante_nombre; D_entregas[sid][idx].comprobante_mime = data.comprobante_mime; }
+    closeModal('m-comprobante');
+    renderCalendario(sid, D_entregas[sid]||[]);
+  } catch(e) { alert(e.message); }
+  finally { btn.textContent = 'Subir comprobante'; btn.disabled = false; }
+}
+function verComprobante(id, tipo) {
+  const url = `/api/entregas-sucursal/${id}/comprobante`;
+  const authUrl = url; // we'll fetch with auth header
+  document.getElementById('m-comp-view-title').textContent = 'Comprobante de pago';
+  const cont = document.getElementById('comp-view-content');
+  cont.innerHTML = '<div style="color:#888;padding:20px">Cargando...</div>';
+  openModal('m-comp-view');
+  fetch(authUrl, { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => r.blob())
+    .then(blob => {
+      const objUrl = URL.createObjectURL(blob);
+      if (blob.type.startsWith('image/')) {
+        cont.innerHTML = `<img src="${objUrl}" style="max-width:100%;border-radius:8px">`;
+      } else {
+        cont.innerHTML = `<iframe src="${objUrl}" style="width:100%;height:500px;border:none;border-radius:8px"></iframe>`;
+      }
+    }).catch(()=>{ cont.innerHTML = '<div style="color:#c0392b">No se pudo cargar el comprobante.</div>'; });
 }
 
 function abrirPagoEntrega(id) {

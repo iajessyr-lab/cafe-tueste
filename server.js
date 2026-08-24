@@ -625,8 +625,11 @@ app.get('/api/sucursales/:id/entregas', auth, async (req, res) => {
   await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'");
   await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS costo NUMERIC(12,2)");
   await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS monto_pagado NUMERIC(12,2) DEFAULT 0");
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_data TEXT");
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_nombre VARCHAR(300)");
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_mime VARCHAR(100)");
   const r = await pool.query(
-    'SELECT * FROM ct_entregas_sucursal WHERE sucursal_id=$1 ORDER BY fecha ASC',
+    'SELECT id,sucursal_id,fecha,productos,kg_total,estado,notas,items,costo,monto_pagado,comprobante_nombre,comprobante_mime FROM ct_entregas_sucursal WHERE sucursal_id=$1 ORDER BY fecha ASC',
     [req.params.id]
   );
   res.json(r.rows);
@@ -650,6 +653,28 @@ app.put('/api/entregas-sucursal/:id', auth, async (req, res) => {
 app.delete('/api/entregas-sucursal/:id', auth, async (req, res) => {
   await pool.query('DELETE FROM ct_entregas_sucursal WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
+});
+app.post('/api/entregas-sucursal/:id/comprobante', auth, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No se recibió archivo.' });
+  if (req.file.size > 5 * 1024 * 1024) return res.status(400).json({ error: 'El archivo no debe superar 5 MB.' });
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_data TEXT");
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_nombre VARCHAR(300)");
+  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_mime VARCHAR(100)");
+  const b64 = req.file.buffer.toString('base64');
+  const r = await pool.query(
+    'UPDATE ct_entregas_sucursal SET comprobante_data=$1,comprobante_nombre=$2,comprobante_mime=$3 WHERE id=$4 RETURNING id,comprobante_nombre,comprobante_mime',
+    [b64, req.file.originalname, req.file.mimetype, req.params.id]
+  );
+  res.json(r.rows[0]);
+});
+app.get('/api/entregas-sucursal/:id/comprobante', auth, async (req, res) => {
+  const r = await pool.query('SELECT comprobante_data,comprobante_nombre,comprobante_mime FROM ct_entregas_sucursal WHERE id=$1', [req.params.id]);
+  const row = r.rows[0];
+  if (!row?.comprobante_data) return res.status(404).json({ error: 'Sin comprobante.' });
+  const buf = Buffer.from(row.comprobante_data, 'base64');
+  res.set('Content-Type', row.comprobante_mime || 'application/octet-stream');
+  res.set('Content-Disposition', `inline; filename="${row.comprobante_nombre || 'comprobante'}"`);
+  res.send(buf);
 });
 
 // ─── EGRESOS ─────────────────────────────────────────────────────────────────
