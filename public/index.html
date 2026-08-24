@@ -280,6 +280,13 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 
       <!-- PEDIDOS -->
       <div class="sec" id="sec-pedidos">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="position:relative;flex:1;max-width:320px">
+            <svg viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#999;fill:none;stroke-width:2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input id="pedidos-buscar" type="text" placeholder="Buscar cliente, producto, nota..." oninput="renderPedidos()" style="width:100%;padding:7px 10px 7px 32px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.85rem;outline:none;box-sizing:border-box">
+          </div>
+          <button onclick="document.getElementById('pedidos-buscar').value='';renderPedidos()" style="font-size:.78rem;color:#888;background:none;border:none;cursor:pointer;padding:0">Limpiar</button>
+        </div>
         <div class="filtros">
           <button class="fbtn on" onclick="fp('todos',this)">Todos</button>
           <button class="fbtn" onclick="fp('pendiente',this)">Pendiente</button>
@@ -1613,6 +1620,11 @@ function renderPedidos() {
   const lMap={pendiente:'Pendiente',empaquetar:'Por empaquetar',sucursal:'Recoge en sucursal','en-camino':'En camino',entregado:'Entregado'};
   let base = verArchivados ? D.pedidos.filter(p=>p.archivado) : D.pedidos.filter(p=>!p.archivado);
   let lista = filtPedidos==='todos' ? base : base.filter(p=>p.estado===filtPedidos);
+  const q = (document.getElementById('pedidos-buscar')?.value||'').toLowerCase().trim();
+  if (q) lista = lista.filter(p=>{
+    const items = Array.isArray(p.items) ? p.items.map(i=>`${i.descripcion||''}`).join(' ') : (p.items||'');
+    return [p.cliente_nombre,p.nota,p.rfc,p.razon_social,items].some(v=>(v||'').toLowerCase().includes(q));
+  });
   const el=document.getElementById('lista-pedidos');
   if(!lista.length){el.innerHTML='<div class="empty">Sin pedidos registrados.</div>';return;}
   el.innerHTML=lista.map(p=>{
