@@ -948,6 +948,12 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 </div></div>
 
 <script>
+// Detección temprana de Safari antiguo (< 14) sin optional chaining
+(function(){
+  try { eval('"x"?.y'); } catch(e) {
+    document.body.innerHTML = '<div style="font-family:sans-serif;max-width:400px;margin:80px auto;padding:30px;border:1px solid #e0e0e0;border-radius:12px;text-align:center"><div style="font-size:2rem;margin-bottom:12px">🌐</div><h2 style="margin:0 0 8px">Actualiza tu Safari</h2><p style="color:#666;font-size:.9rem;line-height:1.5">Esta app requiere <strong>Safari 14 o superior</strong>.<br>Ve a <strong>Preferencias del Sistema → Actualización de Software</strong> para actualizar macOS, o usa Chrome.</p></div>';
+  }
+})();
 // ─── ESTADO ────────────────────────────────────────────────────────────────────
 var token = localStorage.getItem('ct_token');
 var me = JSON.parse(localStorage.getItem('ct_me')||'null');
@@ -2122,18 +2128,24 @@ async function eliminarProducto(id){
 
 // ─── USUARIOS ──────────────────────────────────────────────────────────────────
 async function renderUsuarios(){
-  const lista=await api('GET','/api/usuarios');
-  document.getElementById('card-usuarios').innerHTML=`
-    <div class="card-head"><h3>Usuarios con acceso</h3></div>
-    <div class="card-body">
-      <table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th></th></tr></thead>
-      <tbody>${lista.map(u=>`<tr>
-        <td style="font-weight:700">${u.nombre}</td>
-        <td style="color:#888">@${u.usuario}</td>
-        <td><span class="badge ${u.rol==='admin'?'b-dark':'b-gray'}">${u.rol==='admin'?'Admin':'Operativo'}</span></td>
-        <td>${u.id!==me?.id?`<button class="btn btn-sm btn-sm-red" onclick="eliminarUsuario(${u.id})">Eliminar</button>`:'(tu)'}</td>
-      </tr>`).join('')}</tbody></table>
-    </div>`;
+  const card = document.getElementById('card-usuarios');
+  try {
+    const lista = await api('GET','/api/usuarios');
+    const meId = me && me.id;
+    card.innerHTML=`
+      <div class="card-head"><h3>Usuarios con acceso</h3></div>
+      <div class="card-body">
+        <table class="tbl"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th></th></tr></thead>
+        <tbody>${lista.map(u=>`<tr>
+          <td style="font-weight:700">${u.nombre}</td>
+          <td style="color:#888">@${u.usuario}</td>
+          <td><span class="badge ${u.rol==='admin'?'b-dark':'b-gray'}">${u.rol==='admin'?'Admin':'Operativo'}</span></td>
+          <td>${u.id!==meId?`<button class="btn btn-sm btn-sm-red" onclick="eliminarUsuario(${u.id})">Eliminar</button>`:'<span style="color:#aaa;font-size:.8rem">(tú)</span>'}</td>
+        </tr>`).join('')}</tbody></table>
+      </div>`;
+  } catch(e) {
+    card.innerHTML=`<div class="card-body" style="color:#c0392b;padding:20px">Error al cargar usuarios: ${e.message}</div>`;
+  }
 }
 
 async function crearUsuario(){
