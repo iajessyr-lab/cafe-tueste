@@ -302,10 +302,16 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
       <!-- COBROS -->
       <div class="sec" id="sec-cobros">
         <div class="stats" id="cobros-stats"></div>
-        <div class="filtros">
-          <button class="fbtn on" onclick="fc('todos',this)">Todos</button>
-          <button class="fbtn" onclick="fc('deuda',this)">Pendientes</button>
-          <button class="fbtn" onclick="fc('pagado',this)">Pagados</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+          <div class="filtros" style="margin-bottom:0">
+            <button class="fbtn on" onclick="fc('todos',this)">Todos</button>
+            <button class="fbtn" onclick="fc('deuda',this)">Pendientes</button>
+            <button class="fbtn" onclick="fc('pagado',this)">Pagados</button>
+          </div>
+          <div style="position:relative;min-width:240px">
+            <svg viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#999;fill:none;stroke-width:2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input id="cobros-buscar" type="text" placeholder="Buscar cliente..." oninput="renderCobros()" style="width:100%;padding:7px 10px 7px 32px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.85rem;outline:none;box-sizing:border-box">
+          </div>
         </div>
         <div class="lista" id="lista-cobros"></div>
       </div>
@@ -1730,7 +1736,9 @@ function renderCobros() {
     <div class="stat-card"><div class="val green">${$m(tPagado)}</div><div class="lbl">Cobrado</div></div>
     <div class="stat-card"><div class="val red">${$m(tTotal-tPagado)}</div><div class="lbl">Por cobrar</div></div>
     <div class="stat-card"><div class="val">${$m(tTotal)}</div><div class="lbl">Total facturado</div></div>`;
-  const lista=filtCobros==='todos'?todos:todos.filter(c=>c._e===filtCobros);
+  let lista=filtCobros==='todos'?todos:todos.filter(c=>c._e===filtCobros);
+  const qc=(document.getElementById('cobros-buscar')&&document.getElementById('cobros-buscar').value||'').toLowerCase().trim();
+  if(qc) lista=lista.filter(c=>(c.cliente_nombre||'').toLowerCase().includes(qc)||(c.concepto||'').toLowerCase().includes(qc));
   const el=document.getElementById('lista-cobros');
   if(!lista.length){el.innerHTML='<div class="empty">Sin cobros registrados.</div>';return;}
   const bMap={pagado:'b-green',parcial:'b-yellow',deuda:'b-red'};
