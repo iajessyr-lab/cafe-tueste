@@ -307,6 +307,7 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
             <button class="fbtn on" onclick="fc('todos',this)">Todos</button>
             <button class="fbtn" onclick="fc('deuda',this)">Pendientes</button>
             <button class="fbtn" onclick="fc('pagado',this)">Pagados</button>
+            <button class="fbtn" id="fbtn-cobros-archivados" onclick="fcArchivados(this)" style="margin-left:auto;color:#888">Archivados</button>
           </div>
           <div style="position:relative;min-width:240px">
             <svg viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:#999;fill:none;stroke-width:2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -965,7 +966,7 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 var token = localStorage.getItem('ct_token');
 var me = JSON.parse(localStorage.getItem('ct_me')||'null');
 let D = { lotes:[], verde:[], pedidos:[], cobros:[], clientes:[], productos:[] };
-let filtTueste='todos', filtPedidos='todos', filtCobros='todos';
+let filtTueste='todos', filtPedidos='todos', filtCobros='todos', verCobrosArchivados=false;
 let editLoteId = null, editVerdeId = null;
 
 const hoy = () => new Date().toISOString().split('T')[0];
@@ -1729,14 +1730,15 @@ function estadoCobro(c){
 }
 
 function renderCobros() {
-  const todos=D.cobros.map(c=>({...c,_e:estadoCobro(c)}));
-  const tTotal=todos.reduce((a,c)=>a+parseFloat(c.total||0),0);
-  const tPagado=todos.reduce((a,c)=>a+parseFloat(c.pagado||0),0);
+  const activos=D.cobros.filter(c=>!c.archivado).map(c=>({...c,_e:estadoCobro(c)}));
+  const tTotal=activos.reduce((a,c)=>a+parseFloat(c.total||0),0);
+  const tPagado=activos.reduce((a,c)=>a+parseFloat(c.pagado||0),0);
   document.getElementById('cobros-stats').innerHTML=`
     <div class="stat-card"><div class="val green">${$m(tPagado)}</div><div class="lbl">Cobrado</div></div>
     <div class="stat-card"><div class="val red">${$m(tTotal-tPagado)}</div><div class="lbl">Por cobrar</div></div>
     <div class="stat-card"><div class="val">${$m(tTotal)}</div><div class="lbl">Total facturado</div></div>`;
-  let lista=filtCobros==='todos'?todos:todos.filter(c=>c._e===filtCobros);
+  const base = verCobrosArchivados ? D.cobros.filter(c=>c.archivado).map(c=>({...c,_e:estadoCobro(c)})) : activos;
+  let lista=filtCobros==='todos'?base:base.filter(c=>c._e===filtCobros);
   const qc=(document.getElementById('cobros-buscar')&&document.getElementById('cobros-buscar').value||'').toLowerCase().trim();
   if(qc) lista=lista.filter(c=>(c.cliente_nombre||'').toLowerCase().includes(qc)||(c.concepto||'').toLowerCase().includes(qc));
   const el=document.getElementById('lista-cobros');
@@ -1766,6 +1768,7 @@ function renderCobros() {
       <div class="row-actions">
         ${c._e!=='pagado'?`<button class="btn btn-sm btn-sm-green" onclick="saldarCobro(${c.id})">Marcar pagado</button>`:''}
         <button class="btn btn-sm" onclick="abrirEditarCobro(${c.id})">Editar</button>
+        ${!c.archivado?`<button class="btn btn-sm btn-outline" style="color:#888" onclick="archivarCobro(${c.id})">Archivar</button>`:`<button class="btn btn-sm btn-outline" onclick="desarchivarCobro(${c.id})">Restaurar</button>`}
         <button class="btn btn-sm btn-sm-red" onclick="eliminar('cobros',${c.id})">Eliminar</button>
       </div>
     </div>`;
@@ -1908,9 +1911,28 @@ async function guardarCobro(){
 }
 
 function fc(f,btn){
-  filtCobros=f;
+  filtCobros=f; verCobrosArchivados=false;
   document.querySelectorAll('#sec-cobros .fbtn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on'); renderCobros();
+  btn.classList.add('on');
+  const fa=document.getElementById('fbtn-cobros-archivados'); if(fa){fa.style.color='#888';}
+  renderCobros();
+}
+function fcArchivados(btn){
+  verCobrosArchivados=!verCobrosArchivados;
+  document.querySelectorAll('#sec-cobros .fbtn').forEach(b=>b.classList.remove('on'));
+  if(verCobrosArchivados){ btn.classList.add('on'); btn.style.color=''; filtCobros='todos'; }
+  else { btn.style.color='#888'; document.querySelector('#sec-cobros .fbtn').classList.add('on'); }
+  renderCobros();
+}
+async function archivarCobro(id){
+  const r=await api('PUT',`/api/cobros/${id}/archivar`,{archivado:true});
+  const c=D.cobros.find(x=>x.id===id); if(c) Object.assign(c,r);
+  renderCobros();
+}
+async function desarchivarCobro(id){
+  const r=await api('PUT',`/api/cobros/${id}/archivar`,{archivado:false});
+  const c=D.cobros.find(x=>x.id===id); if(c) Object.assign(c,r);
+  renderCobros();
 }
 
 // ─── WHATSAPP ──────────────────────────────────────────────────────────────────

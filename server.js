@@ -546,6 +546,7 @@ app.get('/api/cobros', auth, async (req, res) => {
   await pool.query('ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS responsable VARCHAR(150)');
   await pool.query('ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS notas TEXT');
   await pool.query("ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS archivos JSONB DEFAULT '[]'");
+  await pool.query("ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS archivado BOOLEAN DEFAULT FALSE");
   const r = await pool.query('SELECT * FROM ct_cobros ORDER BY creado_en DESC');
   res.json(r.rows);
 });
@@ -561,6 +562,11 @@ app.put('/api/cobros/:id', auth, async (req, res) => {
   const r = await pool.query(
     'UPDATE ct_cobros SET pagado=$1,metodo=$2,concepto=$3,total=$4,fecha=$5,responsable=$6,notas=$7,archivos=$8 WHERE id=$9 RETURNING *',
     [pagado,metodo,concepto||null,total||0,fecha,responsable||null,notas||null,JSON.stringify(archivos||[]),req.params.id]);
+  res.json(r.rows[0]);
+});
+app.put('/api/cobros/:id/archivar', auth, async (req, res) => {
+  const { archivado } = req.body;
+  const r = await pool.query('UPDATE ct_cobros SET archivado=$1 WHERE id=$2 RETURNING *', [archivado, req.params.id]);
   res.json(r.rows[0]);
 });
 app.delete('/api/cobros/:id', auth, async (req, res) => {
