@@ -294,6 +294,7 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
           <button class="fbtn" onclick="fp('sucursal',this)">Recoge en sucursal</button>
           <button class="fbtn" onclick="fp('en-camino',this)">En camino</button>
           <button class="fbtn" onclick="fp('entregado',this)">Entregado</button>
+          <button class="fbtn" id="fbtn-archivados" onclick="fpArchivados(this)" style="margin-left:auto;color:#888">Archivados</button>
         </div>
         <div class="lista" id="lista-pedidos"></div>
       </div>
@@ -1041,7 +1042,7 @@ const TITLES = {dashboard:'Dashboard',tueste:'Lotes de Tueste',inventario:'Cafe 
 const ACTIONS = {
   tueste: ()=>`<button class="btn btn-outline" onclick="openModal('m-import')">Importar Cropster</button><button class="btn btn-dark" onclick="abrirLote()">+ Nuevo lote</button>`,
   inventario: ()=>`<button class="btn btn-dark" onclick="abrirVerde()">+ Agregar cafe verde</button>`,
-  pedidos: ()=>`<div style="display:flex;gap:8px"><button class="btn btn-outline" id="btn-archivados" onclick="toggleArchivados(this)">Ver archivados</button><button class="btn btn-dark" onclick="openModal('m-pedido');initPedidoForm()">+ Nuevo pedido</button></div>`,
+  pedidos: ()=>`<button class="btn btn-dark" onclick="openModal('m-pedido');initPedidoForm()">+ Nuevo pedido</button>`,
   cobros: ()=>`<button class="btn btn-dark" onclick="abrirModalCobro()">+ Registrar cobro</button>`,
   clientes: ()=>`<div style="display:flex;gap:8px"><button class="btn btn-outline" onclick="abrirLunesRecordatorio()" title="Enviar seguimiento semanal por WhatsApp">📅 Seguimiento</button><button class="btn btn-dark" onclick="openModal('m-cliente')">+ Nuevo cliente</button></div>`,
   productos: ()=>`<button class="btn btn-dark" onclick="abrirProducto()">+ Nuevo producto</button>`,
@@ -1601,11 +1602,23 @@ async function guardarPedido() {
 
 let verArchivados = false;
 
+function fpArchivados(btn) {
+  verArchivados = !verArchivados;
+  if (verArchivados) {
+    document.querySelectorAll('#sec-pedidos .fbtn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    btn.style.color = '';
+    filtPedidos = 'todos';
+  } else {
+    btn.classList.remove('on');
+    btn.style.color = '#888';
+    document.querySelector('#sec-pedidos .fbtn').classList.add('on');
+  }
+  renderPedidos();
+}
+
 function toggleArchivados(btn) {
   verArchivados = !verArchivados;
-  btn.textContent = verArchivados ? 'Ocultar archivados' : 'Ver archivados';
-  btn.style.background = verArchivados ? '#333' : '';
-  btn.style.color = verArchivados ? '#fff' : '';
   renderPedidos();
 }
 
