@@ -466,6 +466,19 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
           </div>
         </div>
         <div class="lista" id="lista-costos"></div>
+
+        <!-- Catálogo de Bolsas -->
+        <div class="card" style="margin-top:24px">
+          <div class="card-head">
+            <h3>Catálogo de Bolsas</h3>
+            <button class="btn btn-sm btn-dark" onclick="abrirBolsa()">+ Agregar bolsa</button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div id="lista-bolsas">
+              <div class="empty">Cargando...</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- EGRESOS -->
@@ -965,10 +978,18 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 <div class="overlay" id="m-costo"><div class="modal" style="max-width:700px">
   <div class="modal-head"><h3 id="m-costo-titulo">Nueva ficha de costos</h3><button class="modal-close" onclick="closeModal('m-costo')">&#x2715;</button></div>
   <div class="modal-body">
-    <div class="fg" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="fg" style="grid-template-columns:1fr 1fr 1fr 1fr">
       <div class="fl"><label>Nombre del grano</label><input id="co-nombre" type="text" placeholder="ej. Castelan Lavado"></div>
       <div class="fl"><label>Origen</label><input id="co-origen" type="text" placeholder="ej. Veracruz, Mexico"></div>
       <div class="fl"><label>Tipo de grano</label><input id="co-tipo" type="text" placeholder="ej. Lavado"></div>
+      <div class="fl"><label>Tipo de tueste</label><select id="co-tipo-tueste">
+        <option value="">— Sin especificar —</option>
+        <option value="Ligero">Ligero</option>
+        <option value="Medio">Medio</option>
+        <option value="Medio-Oscuro">Medio-Oscuro</option>
+        <option value="Oscuro">Oscuro</option>
+        <option value="Muy Oscuro">Muy Oscuro</option>
+      </select></div>
     </div>
     <div style="background:#f9f9f9;border-radius:10px;padding:14px;margin-bottom:12px">
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:10px">Compra de café verde</div>
@@ -996,6 +1017,22 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="closeModal('m-costo')">Cancelar</button>
     <button class="btn btn-dark" id="m-costo-btn" onclick="guardarFicha()">Guardar ficha</button>
+  </div>
+</div></div>
+
+<!-- MODAL BOLSA -->
+<div class="overlay" id="m-bolsa"><div class="modal" style="max-width:380px">
+  <div class="modal-head"><h3 id="m-bolsa-titulo">Nueva bolsa</h3><button class="modal-close" onclick="closeModal('m-bolsa')">&#x2715;</button></div>
+  <div class="modal-body">
+    <div class="fl"><label>Nombre / descripción</label><input id="bl-nombre" type="text" placeholder="ej. Bolsa kraft 250g con ventana"></div>
+    <div class="fg" style="grid-template-columns:1fr 1fr">
+      <div class="fl"><label>Gramos del formato</label><input id="bl-gramos" type="number" placeholder="250"></div>
+      <div class="fl"><label>Costo por bolsa ($)</label><input id="bl-costo" type="number" step="0.01" placeholder="3.20"></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="closeModal('m-bolsa')">Cancelar</button>
+    <button class="btn btn-dark" id="m-bolsa-btn" onclick="guardarBolsa()">Guardar</button>
   </div>
 </div></div>
 
@@ -1184,12 +1221,14 @@ function go(s) {
 
 // ─── CARGA ─────────────────────────────────────────────────────────────────────
 async function loadAll() {
-  const [lotes,verde,pedidos,cobros,clientes,productos] = await Promise.all([
+  const [lotes,verde,pedidos,cobros,clientes,productos,bolsas] = await Promise.all([
     api('GET','/api/lotes'), api('GET','/api/verde'),
     api('GET','/api/pedidos'), api('GET','/api/cobros'),
-    api('GET','/api/clientes'), api('GET','/api/productos')
+    api('GET','/api/clientes'), api('GET','/api/productos'),
+    api('GET','/api/bolsas').catch(()=>[])
   ]);
   D = {lotes,verde,pedidos,cobros,clientes,productos};
+  D_bolsas = bolsas||[];
   renderAll();
   return true;
 }
@@ -2325,10 +2364,12 @@ async function eliminar(tabla,id){
 
 // ─── COSTOS ─────────────────────────────────────────────────────────────────────
 let D_fichas = [];
+let D_bolsas = [];
 let D_gastos_fijos = [];
 let currentGF = null;
 let _editFichaId = null;
 let _editGFId = null;
+let _editBolsaId = null;
 
 const FORMATOS_DEFAULT = [
   {nombre:'100g', gramos:100, bolsa:1.80, sticker:0.90},
@@ -2369,12 +2410,15 @@ function calcCostos(ficha, costo_fijo_100g=0) {
     const costoUnitario = costoGranos + costoEmpaque + costoFijo;
     const pp = parseFloat(e.precio_publico)||0;
     const pm = parseFloat(e.precio_mayoreo)||0;
+    const pb = parseFloat(e.precio_barra)||0;
     const margenPublico = pp > 0 ? (pp - costoUnitario) / pp : null;
     const gananciaPublico = pp > 0 ? pp - costoUnitario : null;
     const margenMayoreo = pm > 0 ? (pm - costoUnitario) / pm : null;
     const gananciaMayoreo = pm > 0 ? pm - costoUnitario : null;
+    const margenBarra = pb > 0 ? (pb - costoUnitario) / pb : null;
+    const gananciaBarra = pb > 0 ? pb - costoUnitario : null;
     return {...e, costoGranos, costoEmpaque, costoFijo, costoUnitario,
-      margenPublico, gananciaPublico, margenMayoreo, gananciaMayoreo};
+      margenPublico, gananciaPublico, margenMayoreo, gananciaMayoreo, margenBarra, gananciaBarra};
   });
   return {costoGramoVerde, rendimiento, gramos100g, costo100g, empaques};
 }
@@ -2542,6 +2586,7 @@ function recalcCosto() {
     preview.style.display = '';
     const hasPP = r.empaques.some(e=>e.precio_publico>0);
     const hasPM = r.empaques.some(e=>e.precio_mayoreo>0);
+    const hasPB = r.empaques.some(e=>e.precio_barra>0);
     tabla.innerHTML = `
       <tr style="background:#f5f5f5;font-weight:600;font-size:.72rem">
         <th style="padding:6px 8px;text-align:left">Formato</th>
@@ -2551,6 +2596,7 @@ function recalcCosto() {
         <th style="padding:6px 8px;text-align:right;background:#fffbe6">Costo</th>
         ${hasPP?`<th style="padding:6px 8px;text-align:right;background:#f0fdf4;color:#166534">P.Público</th><th style="padding:6px 8px;text-align:right;background:#f0fdf4;color:#166534">Margen</th>`:''}
         ${hasPM?`<th style="padding:6px 8px;text-align:right;background:#eff6ff;color:#1d4ed8">P.Mayoreo</th><th style="padding:6px 8px;text-align:right;background:#eff6ff;color:#1d4ed8">Margen</th>`:''}
+        ${hasPB?`<th style="padding:6px 8px;text-align:right;background:#f5f3ff;color:#7c3aed">P.Barra</th><th style="padding:6px 8px;text-align:right;background:#f5f3ff;color:#7c3aed">Margen</th>`:''}
       </tr>
       ${r.empaques.map(e=>`<tr style="border-top:1px solid #f0f0f0">
         <td style="padding:6px 8px;font-weight:600">${e.nombre}</td>
@@ -2562,28 +2608,48 @@ function recalcCosto() {
                  <td style="padding:6px 8px;text-align:right;background:#f0fdf4;font-weight:600;color:${e.margenPublico>0?'#16a34a':'#dc2626'}">${e.margenPublico!==null?(e.margenPublico*100).toFixed(1)+'%':'-'}</td>`:''}
         ${hasPM?`<td style="padding:6px 8px;text-align:right;background:#eff6ff">${e.precio_mayoreo>0?$m(e.precio_mayoreo):'-'}</td>
                  <td style="padding:6px 8px;text-align:right;background:#eff6ff;font-weight:600;color:${e.margenMayoreo>0?'#1d4ed8':'#dc2626'}">${e.margenMayoreo!==null?(e.margenMayoreo*100).toFixed(1)+'%':'-'}</td>`:''}
+        ${hasPB?`<td style="padding:6px 8px;text-align:right;background:#f5f3ff">${e.precio_barra>0?$m(e.precio_barra):'-'}</td>
+                 <td style="padding:6px 8px;text-align:right;background:#f5f3ff;font-weight:600;color:${e.margenBarra>0?'#7c3aed':'#dc2626'}">${e.margenBarra!==null?(e.margenBarra*100).toFixed(1)+'%':'-'}</td>`:''}
       </tr>`).join('')}
     `;
   } else { preview.style.display = 'none'; }
 }
 
-function addEmpaque(nombre='', gramos='', bolsa='', sticker='', precio_publico='', precio_mayoreo='') {
+function fillBolsa(input, eid) {
+  const b = D_bolsas.find(x=>x.nombre===input.value);
+  if(!b) return;
+  const div = document.getElementById(eid);
+  if(!div) return;
+  if(b.gramos) div.querySelector('[data-f="gramos"]').value = b.gramos;
+  div.querySelector('[data-f="bolsa"]').value = b.costo;
+  recalcCosto();
+}
+
+function addEmpaque(nombre='', gramos='', bolsa='', sticker='', precio_publico='', precio_mayoreo='', precio_barra='', para_mayoreo=false, para_punto_venta=false) {
   const eid = 'emp-'+Date.now()+Math.random().toString(36).slice(2,5);
   const lista = document.getElementById('co-empaques-lista');
+  const datalistId = 'bolsas-dl-'+eid;
+  const bolsasOptions = D_bolsas.map(b=>`<option value="${b.nombre}">`).join('');
   const div = document.createElement('div');
   div.id = eid;
   div.style.cssText = 'border:1px solid #f0f0f0;border-radius:8px;padding:10px;margin-bottom:8px';
   div.innerHTML = `
+    <datalist id="${datalistId}">${bolsasOptions}</datalist>
     <div style="display:grid;grid-template-columns:1fr 80px 80px 80px auto;gap:6px;align-items:end;margin-bottom:6px">
-      <div class="fl"><label style="font-size:.72rem">Formato</label><input type="text" placeholder="ej. 250g" value="${nombre}" oninput="recalcCosto()"></div>
-      <div class="fl"><label style="font-size:.72rem">Gramos</label><input type="number" placeholder="250" value="${gramos}" oninput="recalcCosto()"></div>
-      <div class="fl"><label style="font-size:.72rem">Bolsa ($)</label><input type="number" step="0.01" placeholder="3.20" value="${bolsa}" oninput="recalcCosto()"></div>
-      <div class="fl"><label style="font-size:.72rem">Sticker ($)</label><input type="number" step="0.01" placeholder="0.90" value="${sticker}" oninput="recalcCosto()"></div>
+      <div class="fl"><label style="font-size:.72rem">Formato / Bolsa</label><input type="text" list="${datalistId}" placeholder="ej. 250g kraft" data-f="nombre" value="${nombre}" oninput="fillBolsa(this,'${eid}');recalcCosto()"></div>
+      <div class="fl"><label style="font-size:.72rem">Gramos</label><input type="number" placeholder="250" data-f="gramos" value="${gramos}" oninput="recalcCosto()"></div>
+      <div class="fl"><label style="font-size:.72rem">Bolsa ($)</label><input type="number" step="0.01" placeholder="3.20" data-f="bolsa" value="${bolsa}" oninput="recalcCosto()"></div>
+      <div class="fl"><label style="font-size:.72rem">Sticker ($)</label><input type="number" step="0.01" placeholder="0.90" data-f="sticker" value="${sticker}" oninput="recalcCosto()"></div>
       <button onclick="document.getElementById('${eid}').remove();recalcCosto()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#aaa;padding:0 4px;margin-bottom:2px">✕</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-      <div class="fl"><label style="font-size:.72rem;color:#15803d">Precio público ($)</label><input type="number" step="0.01" placeholder="ej. 280" value="${precio_publico}" oninput="recalcCosto()" style="border-color:#bbf7d0"></div>
-      <div class="fl"><label style="font-size:.72rem;color:#1d4ed8">Precio mayoreo ($)</label><input type="number" step="0.01" placeholder="ej. 184" value="${precio_mayoreo}" oninput="recalcCosto()" style="border-color:#bfdbfe"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+      <div class="fl"><label style="font-size:.72rem;color:#15803d">Precio público ($)</label><input type="number" step="0.01" placeholder="ej. 280" data-f="precio_publico" value="${precio_publico}" oninput="recalcCosto()" style="border-color:#bbf7d0"></div>
+      <div class="fl"><label style="font-size:.72rem;color:#1d4ed8">Precio mayoreo ($)</label><input type="number" step="0.01" placeholder="ej. 184" data-f="precio_mayoreo" value="${precio_mayoreo}" oninput="recalcCosto()" style="border-color:#bfdbfe"></div>
+      <div class="fl"><label style="font-size:.72rem;color:#7c3aed">Precio barra ($)</label><input type="number" step="0.01" placeholder="ej. 220" data-f="precio_barra" value="${precio_barra}" oninput="recalcCosto()" style="border-color:#ddd4fe"></div>
+    </div>
+    <div style="display:flex;gap:16px;font-size:.8rem">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" data-f="para_mayoreo" ${para_mayoreo?'checked':''}>Venta Mayoreo</label>
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" data-f="para_punto_venta" ${para_punto_venta?'checked':''}>Punto de Venta</label>
     </div>
   `;
   lista.appendChild(div);
@@ -2591,17 +2657,17 @@ function addEmpaque(nombre='', gramos='', bolsa='', sticker='', precio_publico='
 }
 
 function getEmpaques() {
-  return Array.from(document.querySelectorAll('#co-empaques-lista > div[id]')).map(div=>{
-    const inputs = div.querySelectorAll('input');
-    return {
-      nombre: inputs[0]?.value||'',
-      gramos: parseFloat(inputs[1]?.value)||0,
-      bolsa: parseFloat(inputs[2]?.value)||0,
-      sticker: parseFloat(inputs[3]?.value)||0,
-      precio_publico: parseFloat(inputs[4]?.value)||0,
-      precio_mayoreo: parseFloat(inputs[5]?.value)||0,
-    };
-  }).filter(e=>e.nombre);
+  return Array.from(document.querySelectorAll('#co-empaques-lista > div[id]')).map(div=>({
+    nombre: div.querySelector('[data-f="nombre"]')?.value||'',
+    gramos: parseFloat(div.querySelector('[data-f="gramos"]')?.value)||0,
+    bolsa: parseFloat(div.querySelector('[data-f="bolsa"]')?.value)||0,
+    sticker: parseFloat(div.querySelector('[data-f="sticker"]')?.value)||0,
+    precio_publico: parseFloat(div.querySelector('[data-f="precio_publico"]')?.value)||0,
+    precio_mayoreo: parseFloat(div.querySelector('[data-f="precio_mayoreo"]')?.value)||0,
+    precio_barra: parseFloat(div.querySelector('[data-f="precio_barra"]')?.value)||0,
+    para_mayoreo: div.querySelector('[data-f="para_mayoreo"]')?.checked||false,
+    para_punto_venta: div.querySelector('[data-f="para_punto_venta"]')?.checked||false,
+  })).filter(e=>e.nombre);
 }
 
 function getFichaFormData() {
@@ -2609,6 +2675,7 @@ function getFichaFormData() {
     nombre: document.getElementById('co-nombre')?.value||'',
     origen: document.getElementById('co-origen')?.value||'',
     tipo: document.getElementById('co-tipo')?.value||'',
+    tipo_tueste: document.getElementById('co-tipo-tueste')?.value||'',
     kg_comprados: document.getElementById('co-kg')?.value||'',
     costo_total: document.getElementById('co-costo-total')?.value||'',
     merma: document.getElementById('co-merma')?.value||13,
@@ -2644,13 +2711,15 @@ function abrirFicha(id) {
     document.getElementById('co-nombre').value = f.nombre||'';
     document.getElementById('co-origen').value = f.origen||'';
     document.getElementById('co-tipo').value = f.tipo||'';
+    document.getElementById('co-tipo-tueste').value = f.tipo_tueste||'';
     document.getElementById('co-kg').value = f.kg_comprados||'';
     document.getElementById('co-costo-total').value = f.costo_total||'';
     document.getElementById('co-merma').value = f.merma||13;
     document.getElementById('co-notas').value = f.notas||'';
-    (f.empaques||[]).forEach(e=>addEmpaque(e.nombre, e.gramos, e.bolsa, e.sticker, e.precio_publico, e.precio_mayoreo));
+    (f.empaques||[]).forEach(e=>addEmpaque(e.nombre, e.gramos, e.bolsa, e.sticker, e.precio_publico, e.precio_mayoreo, e.precio_barra, e.para_mayoreo, e.para_punto_venta));
   } else {
     ['co-nombre','co-origen','co-tipo','co-kg','co-costo-total','co-notas'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('co-tipo-tueste').value = '';
     document.getElementById('co-merma').value = 13;
     FORMATOS_DEFAULT.forEach(f=>addEmpaque(f.nombre, f.gramos, f.bolsa, f.sticker));
   }
@@ -2796,22 +2865,132 @@ async function renderCostos() {
     const r = calcCostos(f, costo_fijo_100g);
     const min = r.empaques.length ? Math.min(...r.empaques.map(e=>e.costoUnitario)) : null;
     const max = r.empaques.length ? Math.max(...r.empaques.map(e=>e.costoUnitario)) : null;
+    const ttLabel = {Ligero:'🟡 Ligero',Medio:'🟠 Medio','Medio-Oscuro':'🟠 Medio-Oscuro',Oscuro:'🔴 Oscuro','Muy Oscuro':'⚫ Muy Oscuro'};
     return `<div class="item" style="cursor:default">
       <div class="item-info" onclick="verFichaTecnica(${f.id})" style="cursor:pointer;flex:1">
-        <div class="item-title">${f.nombre}</div>
+        <div class="item-title">${f.nombre}${f.tipo_tueste?` <span style="font-size:.75rem;color:#888;font-weight:400">· ${ttLabel[f.tipo_tueste]||f.tipo_tueste}</span>`:''}</div>
         <div class="item-sub">${[f.origen,f.tipo].filter(Boolean).join(' · ')}${f.kg_comprados ? ` · ${f.kg_comprados}kg` : ''}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         ${min !== null ? `<div style="text-align:right">
           <div style="font-size:.75rem;color:#aaa">Costo unitario</div>
           <div style="font-size:.95rem;font-weight:600">${$m(min)}${min!==max?' – '+$m(max):''}</div>
         </div>` : ''}
         <button class="btn btn-sm btn-outline" onclick="verFichaTecnica(${f.id})">Ver ficha</button>
         <button class="btn btn-sm btn-outline" onclick="abrirFicha(${f.id})">Editar</button>
+        <button class="btn btn-sm" style="background:#eafaf1;color:#1e8449;border-color:#a9dfbf" onclick="crearProductosDeFicha(${f.id})">→ Productos</button>
         <button class="btn btn-sm" style="background:#fde8e8;color:#c0392b;border-color:#f5c0c0" onclick="eliminarFicha(${f.id})">Eliminar</button>
       </div>
     </div>`;
   }).join('');
+  renderBolsas();
+}
+
+// ── BOLSAS ────────────────────────────────────────────────────────────────────
+function renderBolsas() {
+  const el = document.getElementById('lista-bolsas');
+  if(!el) return;
+  if(!D_bolsas.length) {
+    el.innerHTML = `<div class="empty" style="padding:28px">Sin bolsas en el catálogo. Agrega la primera.</div>`;
+    return;
+  }
+  el.innerHTML = `<table class="tbl">
+    <thead><tr><th>Bolsa</th><th>Gramos</th><th>Costo</th><th></th></tr></thead>
+    <tbody>${D_bolsas.map(b=>`<tr>
+      <td>${b.nombre}</td>
+      <td>${b.gramos||'—'}</td>
+      <td>${$m(b.costo)}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn-sm btn-outline" style="padding:4px 10px;border-radius:6px;border:1.5px solid #ddd;cursor:pointer;font-size:.75rem" onclick="abrirBolsa(${b.id})">Editar</button>
+        <button class="btn-sm" style="padding:4px 10px;border-radius:6px;border:1.5px solid #f5c0c0;background:#fde8e8;color:#c0392b;cursor:pointer;font-size:.75rem;margin-left:4px" onclick="eliminarBolsa(${b.id})">Eliminar</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function abrirBolsa(id) {
+  _editBolsaId = id||null;
+  document.getElementById('m-bolsa-titulo').textContent = id ? 'Editar bolsa' : 'Nueva bolsa';
+  document.getElementById('m-bolsa-btn').textContent = id ? 'Guardar cambios' : 'Guardar';
+  if(id) {
+    const b = D_bolsas.find(x=>x.id===id);
+    if(!b) return;
+    document.getElementById('bl-nombre').value = b.nombre||'';
+    document.getElementById('bl-gramos').value = b.gramos||'';
+    document.getElementById('bl-costo').value = b.costo||'';
+  } else {
+    document.getElementById('bl-nombre').value = '';
+    document.getElementById('bl-gramos').value = '';
+    document.getElementById('bl-costo').value = '';
+  }
+  openModal('m-bolsa');
+}
+
+async function guardarBolsa() {
+  const data = {
+    nombre: document.getElementById('bl-nombre').value.trim(),
+    gramos: document.getElementById('bl-gramos').value||null,
+    costo: document.getElementById('bl-costo').value||0,
+  };
+  if(!data.nombre) return alert('Ingresa el nombre de la bolsa');
+  if(_editBolsaId) {
+    const r = await api('PUT', `/api/bolsas/${_editBolsaId}`, data);
+    const idx = D_bolsas.findIndex(x=>x.id===_editBolsaId);
+    if(idx>=0) D_bolsas[idx] = r;
+  } else {
+    const r = await api('POST', '/api/bolsas', data);
+    D_bolsas.push(r);
+    D_bolsas.sort((a,b)=>(a.gramos||9999)-(b.gramos||9999));
+  }
+  closeModal('m-bolsa');
+  renderBolsas();
+}
+
+async function eliminarBolsa(id) {
+  if(!confirm('¿Eliminar esta bolsa del catálogo?')) return;
+  await api('DELETE', `/api/bolsas/${id}`);
+  D_bolsas = D_bolsas.filter(x=>x.id!==id);
+  renderBolsas();
+}
+
+async function crearProductosDeFicha(fichaId) {
+  const f = D_fichas.find(x=>x.id===fichaId);
+  if(!f) return;
+  const empaques = (f.empaques||[]).filter(e=>e.para_mayoreo||e.para_punto_venta);
+  if(!empaques.length) {
+    alert('No hay formatos marcados para Mayoreo o Punto de Venta en esta ficha.\nEdita la ficha y activa las palomitas en los formatos que quieres crear como productos.');
+    return;
+  }
+  const creados = [];
+  for(const e of empaques) {
+    const tipos = [];
+    if(e.para_mayoreo) tipos.push('mayoreo');
+    if(e.para_punto_venta) tipos.push('punto_venta');
+    const tipo_venta = tipos.length===2 ? 'ambos' : tipos[0];
+    const precio = e.para_punto_venta ? (e.precio_publico||0) : (e.precio_mayoreo||0);
+    const body = {
+      nombre: `${f.nombre} ${e.nombre}`,
+      origen: f.origen||'',
+      presentacion: e.nombre,
+      tipo_tueste: f.tipo_tueste||'',
+      tipo_venta,
+      precio_venta: precio,
+      precio_mayoreo: e.precio_mayoreo||0,
+      categoria: 'cafe',
+      notas: `Ficha: ${f.nombre}${f.tipo?' · '+f.tipo:''}`,
+    };
+    try {
+      const r = await api('POST', '/api/productos', body);
+      D.productos.push(r);
+      creados.push(e.nombre);
+    } catch(err) {}
+  }
+  if(creados.length) {
+    alert(`✓ Se crearon ${creados.length} producto(s): ${creados.join(', ')}\n\nPuedes verlos en la sección Productos.`);
+    renderProductos();
+  } else {
+    alert('No se pudo crear ningún producto. Revisa la conexión.');
+  }
 }
 
 // ─── EGRESOS ──────────────────────────────────────────────────────────────────

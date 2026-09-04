@@ -763,6 +763,7 @@ app.get('/api/fichas', auth, async (req, res) => {
     nombre VARCHAR(200) NOT NULL,
     origen VARCHAR(200),
     tipo VARCHAR(200),
+    tipo_tueste VARCHAR(100),
     kg_comprados NUMERIC,
     costo_total NUMERIC,
     merma NUMERIC DEFAULT 13,
@@ -772,27 +773,61 @@ app.get('/api/fichas', auth, async (req, res) => {
     notas TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
+  await pool.query(`ALTER TABLE ct_fichas_costo ADD COLUMN IF NOT EXISTS tipo_tueste VARCHAR(100)`);
   const r = await pool.query('SELECT * FROM ct_fichas_costo ORDER BY created_at DESC');
   res.json(r.rows);
 });
 app.post('/api/fichas', auth, async (req, res) => {
-  const { nombre, origen, tipo, kg_comprados, costo_total, merma, mo_mensual, mo_produccion, empaques, notas } = req.body;
+  const { nombre, origen, tipo, tipo_tueste, kg_comprados, costo_total, merma, mo_mensual, mo_produccion, empaques, notas } = req.body;
   const r = await pool.query(
-    'INSERT INTO ct_fichas_costo (nombre,origen,tipo,kg_comprados,costo_total,merma,mo_mensual,mo_produccion,empaques,notas) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',
-    [nombre, origen||null, tipo||null, kg_comprados||null, costo_total||null, merma||13, mo_mensual||0, mo_produccion||100, JSON.stringify(empaques||[]), notas||null]
+    'INSERT INTO ct_fichas_costo (nombre,origen,tipo,tipo_tueste,kg_comprados,costo_total,merma,mo_mensual,mo_produccion,empaques,notas) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *',
+    [nombre, origen||null, tipo||null, tipo_tueste||null, kg_comprados||null, costo_total||null, merma||13, mo_mensual||0, mo_produccion||100, JSON.stringify(empaques||[]), notas||null]
   );
   res.json(r.rows[0]);
 });
 app.put('/api/fichas/:id', auth, async (req, res) => {
-  const { nombre, origen, tipo, kg_comprados, costo_total, merma, mo_mensual, mo_produccion, empaques, notas } = req.body;
+  const { nombre, origen, tipo, tipo_tueste, kg_comprados, costo_total, merma, mo_mensual, mo_produccion, empaques, notas } = req.body;
   const r = await pool.query(
-    'UPDATE ct_fichas_costo SET nombre=$1,origen=$2,tipo=$3,kg_comprados=$4,costo_total=$5,merma=$6,mo_mensual=$7,mo_produccion=$8,empaques=$9,notas=$10 WHERE id=$11 RETURNING *',
-    [nombre, origen||null, tipo||null, kg_comprados||null, costo_total||null, merma||13, mo_mensual||0, mo_produccion||100, JSON.stringify(empaques||[]), notas||null, req.params.id]
+    'UPDATE ct_fichas_costo SET nombre=$1,origen=$2,tipo=$3,tipo_tueste=$4,kg_comprados=$5,costo_total=$6,merma=$7,mo_mensual=$8,mo_produccion=$9,empaques=$10,notas=$11 WHERE id=$12 RETURNING *',
+    [nombre, origen||null, tipo||null, tipo_tueste||null, kg_comprados||null, costo_total||null, merma||13, mo_mensual||0, mo_produccion||100, JSON.stringify(empaques||[]), notas||null, req.params.id]
   );
   res.json(r.rows[0]);
 });
 app.delete('/api/fichas/:id', auth, async (req, res) => {
   await pool.query('DELETE FROM ct_fichas_costo WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// ── BOLSAS / EMPAQUES CATALOG ──────────────────────────────────────────────
+app.get('/api/bolsas', auth, async (req, res) => {
+  await pool.query(`CREATE TABLE IF NOT EXISTS ct_bolsas (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(200) NOT NULL,
+    gramos NUMERIC,
+    costo NUMERIC(10,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  const r = await pool.query('SELECT * FROM ct_bolsas ORDER BY gramos ASC NULLS LAST, nombre ASC');
+  res.json(r.rows);
+});
+app.post('/api/bolsas', auth, async (req, res) => {
+  const { nombre, gramos, costo } = req.body;
+  const r = await pool.query(
+    'INSERT INTO ct_bolsas (nombre, gramos, costo) VALUES ($1,$2,$3) RETURNING *',
+    [nombre, gramos||null, costo||0]
+  );
+  res.json(r.rows[0]);
+});
+app.put('/api/bolsas/:id', auth, async (req, res) => {
+  const { nombre, gramos, costo } = req.body;
+  const r = await pool.query(
+    'UPDATE ct_bolsas SET nombre=$1, gramos=$2, costo=$3 WHERE id=$4 RETURNING *',
+    [nombre, gramos||null, costo||0, req.params.id]
+  );
+  res.json(r.rows[0]);
+});
+app.delete('/api/bolsas/:id', auth, async (req, res) => {
+  await pool.query('DELETE FROM ct_bolsas WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });
 
