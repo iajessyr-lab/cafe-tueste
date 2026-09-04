@@ -161,6 +161,80 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
 .drop-zone{border:2px dashed #ddd;border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:#fafafa}
 .drop-zone:hover,.drop-zone.drag{border-color:#111;background:#f0f0f0}
 .drop-zone p{font-size:.85rem;color:#999;margin-top:8px}
+
+/* ── HAMBURGER ── */
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;color:#111;flex-shrink:0}
+.hamburger svg{width:22px;height:22px;display:block}
+
+/* ── SIDEBAR OVERLAY ── */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.sidebar-overlay.on{display:block}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  /* Hamburger visible */
+  .hamburger{display:flex;align-items:center}
+
+  /* Sidebar off-screen, slides in */
+  aside{transform:translateX(-100%);transition:transform .25s ease;z-index:100}
+  aside.open{transform:translateX(0)}
+
+  /* Main full width */
+  .main{margin-left:0}
+
+  /* Topbar */
+  .topbar{padding:0 16px;gap:10px}
+  .topbar-title{font-size:.95rem}
+  .topbar-actions{gap:6px}
+  .topbar-actions .btn{padding:7px 12px;font-size:.78rem}
+
+  /* Content padding */
+  .content{padding:16px}
+
+  /* Stats: 2 cols on phone */
+  .stats{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+  .stat-card{padding:14px 14px}
+  .stat-card .val{font-size:1.4rem}
+
+  /* Dashboard 2-col grid → 1-col */
+  #sec-dashboard > div[style*="grid-template-columns:1fr 1fr"]{
+    grid-template-columns:1fr!important;
+  }
+
+  /* Form grids → single column */
+  .fg{grid-template-columns:1fr}
+
+  /* Modals full-screen */
+  .overlay{padding:0;align-items:flex-end}
+  .modal{max-width:100%;border-radius:16px 16px 0 0;max-height:92vh}
+
+  /* Tables scrollable */
+  .card-body > .tbl,
+  div > .tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* Filtros / tabs horizontal scroll */
+  .filtros{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .filtros::-webkit-scrollbar{display:none}
+  .fbtn{flex-shrink:0}
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0}
+
+  /* Row actions stack on small */
+  .row-actions{flex-wrap:wrap}
+  .row-actions .btn-sm{font-size:.72rem;padding:6px 10px;min-height:34px}
+
+  /* Auth card full-width */
+  .auth-card{padding:32px 24px;margin:16px}
+
+  /* Body padding for bottom safe area */
+  body{padding-bottom:env(safe-area-inset-bottom)}
+}
+
+@media(max-width:400px){
+  .stats{grid-template-columns:1fr}
+  .topbar-actions .btn span{display:none}
+}
 </style>
 </head>
 <body>
@@ -248,8 +322,14 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
     </div>
   </aside>
 
+  <!-- Overlay for mobile sidebar -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
   <div class="main">
     <div class="topbar">
+      <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
       <div class="topbar-title" id="topbar-title">Dashboard</div>
       <div class="topbar-actions" id="topbar-actions"></div>
     </div>
@@ -1074,9 +1154,19 @@ const ACTIONS = {
   usuarios: ()=>`<button class="btn btn-dark" onclick="openModal('m-usuario')">+ Crear usuario</button>`,
 };
 
+function toggleSidebar() {
+  document.querySelector('aside').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('on');
+}
+function closeSidebar() {
+  document.querySelector('aside').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('on');
+}
+
 function go(s) {
   if (!document.getElementById('sec-'+s)) return;
   location.hash = s;
+  closeSidebar();
   document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.s-btn').forEach(e=>e.classList.remove('on'));
   document.getElementById('sec-'+s).classList.add('on');
