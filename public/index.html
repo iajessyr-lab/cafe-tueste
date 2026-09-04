@@ -1035,7 +1035,12 @@ function showApp() {
     document.getElementById('s-admin-section').style.display='block';
     document.getElementById('s-btn-usuarios').style.display='flex';
   }
-  loadAll();
+  loadAll().then(() => {
+    const hash = location.hash.replace('#','');
+    const secciones = ['dashboard','tueste','inventario','pedidos','cobros','clientes','productos','costos','egresos','resultados','pagos','sucursales','usuarios'];
+    if (hash && secciones.includes(hash)) go(hash);
+    else go('dashboard');
+  });
 }
 
 function logout() {
@@ -1062,6 +1067,8 @@ const ACTIONS = {
 };
 
 function go(s) {
+  if (!document.getElementById('sec-'+s)) return;
+  location.hash = s;
   document.querySelectorAll('.sec').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.s-btn').forEach(e=>e.classList.remove('on'));
   document.getElementById('sec-'+s).classList.add('on');
@@ -1086,6 +1093,7 @@ async function loadAll() {
   ]);
   D = {lotes,verde,pedidos,cobros,clientes,productos};
   renderAll();
+  return true;
 }
 
 function renderAll() {
@@ -3472,6 +3480,25 @@ dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)importarCSV(f);});
 
 // ─── INIT ──────────────────────────────────────────────────────────────────────
+// Recargar datos cuando la pestaña vuelve a estar visible (otro usuario hizo cambios)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && token) {
+    loadAll().then(() => {
+      const hash = location.hash.replace('#','');
+      const cur = document.querySelector('.sec.on');
+      if (cur) {
+        const s = cur.id.replace('sec-','');
+        if(s==='sucursales') renderSucursales();
+        if(s==='pagos') renderPagos();
+        if(s==='costos') renderCostos();
+        if(s==='egresos') renderEgresos();
+        if(s==='resultados') renderResultados();
+        if(s==='usuarios') renderUsuarios();
+      }
+    });
+  }
+});
+
 initAuth();
 </script>
 </body>
