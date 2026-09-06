@@ -2972,12 +2972,12 @@ async function crearProductosDeFicha(fichaId) {
       nombre: `${f.nombre} ${e.nombre}`,
       origen: f.origen||'',
       presentacion: e.nombre,
+      peso_g: e.gramos||null,
       tipo_tueste: f.tipo_tueste||'',
       tipo_venta,
-      precio_venta: precio,
-      precio_mayoreo: e.precio_mayoreo||0,
+      precio: e.para_punto_venta ? (e.precio_publico||0) : (e.precio_mayoreo||0),
+      comentarios: `Ficha: ${f.nombre}${f.tipo?' · '+f.tipo:''}`,
       categoria: 'cafe',
-      notas: `Ficha: ${f.nombre}${f.tipo?' · '+f.tipo:''}`,
     };
     try {
       const r = await api('POST', '/api/productos', body);
