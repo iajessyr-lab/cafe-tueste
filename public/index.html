@@ -2967,7 +2967,13 @@ async function crearProductosDeFicha(fichaId) {
     if(e.para_mayoreo) tipos.push('mayoreo');
     if(e.para_punto_venta) tipos.push('punto_venta');
     const tipo_venta = tipos.length===2 ? 'ambos' : tipos[0];
-    const precio = e.para_punto_venta ? (e.precio_publico||0) : (e.precio_mayoreo||0);
+    const pp = parseFloat(e.precio_publico)||0;
+    const pm = parseFloat(e.precio_mayoreo)||0;
+    const pb = parseFloat(e.precio_barra)||0;
+    // Precio principal: publico si es PV, mayoreo si es mayoreo, primero disponible si ambos
+    const precio = tipo_venta==='punto_venta' ? (pp||pm||pb)
+                 : tipo_venta==='mayoreo'      ? (pm||pp||pb)
+                 :                               (pp||pm||pb);
     const body = {
       nombre: `${f.nombre} ${e.nombre}`,
       origen: f.origen||'',
@@ -2975,7 +2981,8 @@ async function crearProductosDeFicha(fichaId) {
       peso_g: e.gramos||null,
       tipo_tueste: f.tipo_tueste||'',
       tipo_venta,
-      precio: e.para_punto_venta ? (e.precio_publico||0) : (e.precio_mayoreo||0),
+      precio,
+      costo_produccion: pm||null,
       comentarios: `Ficha: ${f.nombre}${f.tipo?' · '+f.tipo:''}`,
       categoria: 'cafe',
     };
