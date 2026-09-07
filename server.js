@@ -777,6 +777,11 @@ app.get('/api/fichas', auth, async (req, res) => {
   const r = await pool.query('SELECT * FROM ct_fichas_costo ORDER BY created_at DESC');
   res.json(r.rows);
 });
+app.get('/api/fichas/:id', auth, async (req, res) => {
+  const r = await pool.query('SELECT * FROM ct_fichas_costo WHERE id=$1', [req.params.id]);
+  if(!r.rows.length) return res.status(404).json({error:'No encontrada'});
+  res.json(r.rows[0]);
+});
 app.post('/api/fichas', auth, async (req, res) => {
   const { nombre, origen, tipo, tipo_tueste, kg_comprados, costo_total, merma, mo_mensual, mo_produccion, empaques, notas } = req.body;
   const r = await pool.query(

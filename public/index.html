@@ -2954,26 +2954,44 @@ async function eliminarBolsa(id) {
 }
 
 async function crearProductosDeFicha(fichaId) {
-  const f = D_fichas.find(x=>x.id===fichaId);
+  // Siempre leer datos frescos del servidor
+  let f;
+  try { f = await api('GET', `/api/fichas/${fichaId}`); } catch(e) {}
+  if(!f) f = D_fichas.find(x=>x.id===fichaId);
   if(!f) return;
+
   const empaques = (f.empaques||[]).filter(e=>e.para_mayoreo||e.para_punto_venta);
   if(!empaques.length) {
-    alert('No hay formatos marcados para Mayoreo o Punto de Venta en esta ficha.\nEdita la ficha y activa las palomitas en los formatos que quieres crear como productos.');
+    alert('No hay formatos marcados para Mayoreo o Punto de Venta en esta ficha.\nEdita la ficha, activa las palomitas en los formatos que quieres crear como productos, y guarda los cambios primero.');
     return;
   }
-  const creados = [];
-  for(const e of empaques) {
-    const tipos = [];
-    if(e.para_mayoreo) tipos.push('mayoreo');
-    if(e.para_punto_venta) tipos.push('punto_venta');
-    const tipo_venta = tipos.length===2 ? 'ambos' : tipos[0];
+
+  // Calcular precios y mostrar resumen antes de crear
+  const lineas = empaques.map(e => {
     const pp = parseFloat(e.precio_publico)||0;
     const pm = parseFloat(e.precio_mayoreo)||0;
     const pb = parseFloat(e.precio_barra)||0;
-    // Precio principal: publico si es PV, mayoreo si es mayoreo, primero disponible si ambos
+    const tipos = [];
+    if(e.para_mayoreo) tipos.push('May');
+    if(e.para_punto_venta) tipos.push('PV');
+    const tipo_venta = (e.para_mayoreo && e.para_punto_venta) ? 'ambos' : e.para_mayoreo ? 'mayoreo' : 'punto_venta';
     const precio = tipo_venta==='punto_venta' ? (pp||pm||pb)
                  : tipo_venta==='mayoreo'      ? (pm||pp||pb)
                  :                               (pp||pm||pb);
+    return {e, tipo_venta, precio, pp, pm, pb, tipos};
+  });
+
+  const resumen = lineas.map(l =>
+    `• ${f.nombre} ${l.e.nombre} [${l.tipos.join('+')}] → Precio: $${l.precio}`
+  ).join('\n');
+
+  const sinPrecio = lineas.filter(l=>l.precio===0);
+  const aviso = sinPrecio.length ? `\n\n⚠️ ${sinPrecio.length} formato(s) tienen precio $0. Guarda la ficha con precios antes de continuar.` : '';
+
+  if(!confirm(`Crear estos productos:\n\n${resumen}${aviso}\n\n¿Continuar?`)) return;
+
+  const creados = [];
+  for(const {e, tipo_venta, precio, pm} of lineas) {
     const body = {
       nombre: `${f.nombre} ${e.nombre}`,
       origen: f.origen||'',
