@@ -1014,9 +1014,12 @@ aside{width:230px;min-width:230px;background:#0a0a0a;display:flex;flex-direction
     </div>
     <div class="fl" style="margin-top:12px"><label>Notas</label><input id="co-notas" type="text" placeholder="Observaciones..."></div>
   </div>
-  <div class="modal-footer">
+  <div class="modal-footer" style="justify-content:space-between">
     <button class="btn btn-outline" onclick="closeModal('m-costo')">Cancelar</button>
-    <button class="btn btn-dark" id="m-costo-btn" onclick="guardarFicha()">Guardar ficha</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="background:#eafaf1;color:#1e8449;border:1.5px solid #a9dfbf" id="m-costo-productos-btn" onclick="guardarYCrearProductos()" style="display:none">Guardar y → Productos</button>
+      <button class="btn btn-dark" id="m-costo-btn" onclick="guardarFicha()">Guardar ficha</button>
+    </div>
   </div>
 </div></div>
 
@@ -2688,6 +2691,7 @@ function abrirFicha(id) {
   _editFichaId = id||null;
   document.getElementById('m-costo-titulo').textContent = id ? 'Editar ficha' : 'Nueva ficha de costos';
   document.getElementById('m-costo-btn').textContent = id ? 'Guardar cambios' : 'Guardar ficha';
+  document.getElementById('m-costo-productos-btn').style.display = id ? '' : 'none';
   document.getElementById('co-empaques-lista').innerHTML = '';
   document.getElementById('co-info-verde').innerHTML = '';
   document.getElementById('co-preview').style.display = 'none';
@@ -2726,7 +2730,7 @@ function abrirFicha(id) {
   openModal('m-costo');
 }
 
-async function guardarFicha() {
+async function guardarFicha(keepOpen=false) {
   const data = getFichaFormData();
   if(!data.nombre) return alert('Ingresa el nombre del grano');
   let r;
@@ -2737,9 +2741,9 @@ async function guardarFicha() {
   } else {
     r = await api('POST', '/api/fichas', data);
     D_fichas.push(r);
+    _editFichaId = r.id;
   }
-  closeModal('m-costo');
-  renderCostos();
+  if(!keepOpen) { closeModal('m-costo'); renderCostos(); }
 }
 
 async function eliminarFicha(id) {
@@ -2951,6 +2955,53 @@ async function eliminarBolsa(id) {
   await api('DELETE', `/api/bolsas/${id}`);
   D_bolsas = D_bolsas.filter(x=>x.id!==id);
   renderBolsas();
+}
+
+async function guardarYCrearProductos() {
+  // 1. Guardar la ficha con los datos actuales del formulario
+  await guardarFicha(true); // true = no cerrar modal
+  // 2. Crear productos con datos del formulario (frescos)
+  const empaques = getEmpaques().filter(e=>e.para_mayoreo||e.para_punto_venta);
+  if(!empaques.length) {
+    alert('Activa las palomitas de Mayoreo o Punto de Venta en los formatos que quieres crear como productos.');
+    return;
+  }
+  const f = getFichaFormData();
+  const fid = _editFichaId;
+  const lineas = empaques.map(e => {
+    const pp = parseFloat(e.precio_publico)||0;
+    const pm = parseFloat(e.precio_mayoreo)||0;
+    const pb = parseFloat(e.precio_barra)||0;
+    const tipo_venta = (e.para_mayoreo && e.para_punto_venta) ? 'ambos' : e.para_mayoreo ? 'mayoreo' : 'punto_venta';
+    const precio = tipo_venta==='punto_venta' ? (pp||pm||pb) : tipo_venta==='mayoreo' ? (pm||pp||pb) : (pp||pm||pb);
+    return {e, tipo_venta, precio, pm};
+  });
+  const resumen = lineas.map(l=>`• ${f.nombre} ${l.e.nombre} → $${l.precio}`).join('\n');
+  if(!confirm(`Crear productos:\n\n${resumen}\n\n¿Continuar?`)) return;
+  const creados = [];
+  for(const {e, tipo_venta, precio, pm} of lineas) {
+    try {
+      const r = await api('POST', '/api/productos', {
+        nombre: `${f.nombre} ${e.nombre}`,
+        origen: f.origen||'',
+        presentacion: e.nombre,
+        peso_g: e.gramos||null,
+        tipo_tueste: f.tipo_tueste||'',
+        tipo_venta, precio,
+        costo_produccion: pm||null,
+        comentarios: `Ficha: ${f.nombre}${f.tipo?' · '+f.tipo:''}`,
+        categoria: 'cafe',
+      });
+      D.productos.push(r);
+      creados.push(e.nombre);
+    } catch(err) {}
+  }
+  closeModal('m-costo');
+  if(creados.length) {
+    alert(`✓ Creados: ${creados.join(', ')}\n\nVe a la sección Productos.`);
+    renderProductos();
+    renderCostos();
+  }
 }
 
 async function crearProductosDeFicha(fichaId) {
