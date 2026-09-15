@@ -3643,22 +3643,18 @@ function renderCalendario(sucursalId, entregas) {
 
   el.innerHTML = `
     <!-- Saldo banner -->
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#fff;border:1px solid #ebebeb;border-radius:12px;padding:16px 20px;margin-bottom:20px">
-      <div style="flex:1;display:flex;gap:24px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Costo total</div>
-          <div style="font-size:1.1rem;font-weight:700;color:#111">${$m(totalCosto)}</div>
-        </div>
-        <div>
-          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Pagado</div>
-          <div style="font-size:1.1rem;font-weight:700;color:#27ae60">${$m(totalPagado)}</div>
-        </div>
-        <div style="background:${hayPendiente?'#fff7ed':'#f0fdf4'};border-radius:8px;padding:8px 14px">
-          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:${hayPendiente?'#92400e':'#166534'};letter-spacing:.5px">Saldo pendiente</div>
-          <div style="font-size:1.3rem;font-weight:800;color:${hayPendiente?'#d97706':'#16a34a'}">${$m(totalPendiente)}</div>
-        </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+      <div class="stat-card" style="flex:1;min-width:140px">
+        <div class="lbl">Por pagar</div>
+        <div class="val" style="color:${hayPendiente?'#d97706':'#16a34a'}">${$m(totalPendiente)}</div>
       </div>
-      ${hayPendiente?`<button class="btn btn-dark" onclick="abonarSucursal(${sucursalId})">💰 Abonar</button>`:'<span class="badge b-green" style="font-size:.8rem">Saldo al día ✓</span>'}
+      <div class="stat-card" style="flex:1;min-width:140px">
+        <div class="lbl">Pagado</div>
+        <div class="val green">${$m(totalPagado)}</div>
+      </div>
+      ${hayPendiente
+        ? `<button class="btn btn-dark" style="white-space:nowrap" onclick="abonarSucursal(${sucursalId})">💰 Abonar</button>`
+        : `<span class="badge b-green" style="font-size:.8rem;white-space:nowrap">Saldo al día ✓</span>`}
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
