@@ -3635,7 +3635,32 @@ function renderCalendario(sucursalId, entregas) {
     </div>`;
   };
 
+  // ── Saldo de la sucursal ──
+  const totalCosto   = entregas.reduce((a,e)=>a+parseFloat(e.costo||0),0);
+  const totalPagado  = entregas.reduce((a,e)=>a+parseFloat(e.monto_pagado||0),0);
+  const totalPendiente = totalCosto - totalPagado;
+  const hayPendiente = totalPendiente > 0.01;
+
   el.innerHTML = `
+    <!-- Saldo banner -->
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#fff;border:1px solid #ebebeb;border-radius:12px;padding:16px 20px;margin-bottom:20px">
+      <div style="flex:1;display:flex;gap:24px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Costo total</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#111">${$m(totalCosto)}</div>
+        </div>
+        <div>
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#aaa;letter-spacing:.5px">Pagado</div>
+          <div style="font-size:1.1rem;font-weight:700;color:#27ae60">${$m(totalPagado)}</div>
+        </div>
+        <div style="background:${hayPendiente?'#fff7ed':'#f0fdf4'};border-radius:8px;padding:8px 14px">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:${hayPendiente?'#92400e':'#166534'};letter-spacing:.5px">Saldo pendiente</div>
+          <div style="font-size:1.3rem;font-weight:800;color:${hayPendiente?'#d97706':'#16a34a'}">${$m(totalPendiente)}</div>
+        </div>
+      </div>
+      ${hayPendiente?`<button class="btn btn-dark" onclick="abonarSucursal(${sucursalId})">💰 Abonar</button>`:'<span class="badge b-green" style="font-size:.8rem">Saldo al día ✓</span>'}
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
       <div>
         <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:14px">Proximas entregas</div>
@@ -3780,6 +3805,43 @@ function verComprobante(id, tipo) {
         cont.innerHTML = `<iframe src="${objUrl}" style="width:100%;height:500px;border:none;border-radius:8px"></iframe>`;
       }
     }).catch(()=>{ cont.innerHTML = '<div style="color:#c0392b">No se pudo cargar el comprobante.</div>'; });
+}
+
+async function abonarSucursal(sucursalId) {
+  const entregas = D_entregas[sucursalId] || [];
+  // Entregas con saldo pendiente, ordenadas por fecha (más antigua primero)
+  const pendientes = entregas
+    .filter(e => parseFloat(e.costo||0) > parseFloat(e.monto_pagado||0))
+    .sort((a,b) => a.fecha.localeCompare(b.fecha));
+  if(!pendientes.length) return alert('No hay entregas con saldo pendiente.');
+
+  const totalPendiente = pendientes.reduce((a,e)=>a+(parseFloat(e.costo||0)-parseFloat(e.monto_pagado||0)),0);
+
+  // Mostrar resumen de pendientes
+  const resumen = pendientes.map(e=>{
+    const p = parseFloat(e.costo||0)-parseFloat(e.monto_pagado||0);
+    return `${fmt(e.fecha)}: ${$m(p)} pendiente`;
+  }).join('\n');
+
+  const monto = parseFloat(prompt(`Saldo total pendiente: ${$m(totalPendiente)}\n\nDesglose:\n${resumen}\n\n¿Cuánto abona? ($)`));
+  if(isNaN(monto) || monto <= 0) return;
+
+  // Aplicar abono a entregas en orden (más antigua primero)
+  let restante = monto;
+  for(const e of pendientes) {
+    if(restante <= 0) break;
+    const pendienteE = parseFloat(e.costo||0) - parseFloat(e.monto_pagado||0);
+    const abonoE = Math.min(restante, pendienteE);
+    const nuevoPagado = parseFloat(e.monto_pagado||0) + abonoE;
+    const esPagadaTotal = nuevoPagado >= parseFloat(e.costo||0) - 0.01;
+    await api('PUT', `/api/entregas-sucursal/${e.id}`, {
+      ...e, items: e.items||[], monto_pagado: nuevoPagado,
+      estado: esPagadaTotal ? 'pagada' : e.estado
+    });
+    restante -= abonoE;
+  }
+  alert(`✓ Abono de ${$m(monto)} registrado.${restante > 0.01 ? `\n(${$m(restante)} en exceso — sin entrega pendiente a la que aplicar)` : ''}`);
+  activarSucursal(sucursalId, null);
 }
 
 function abrirPagoEntrega(id) {
