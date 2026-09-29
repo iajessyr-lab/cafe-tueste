@@ -3588,8 +3588,8 @@ async function activarSucursal(id, btn) {
 function renderCalendario(sucursalId, entregas) {
   const el = document.getElementById('sucursales-content');
   const hoy = new Date(); hoy.setHours(12,0,0,0);
-  const proximas = entregas.filter(e=>new Date(e.fecha.slice(0,10)+'T12:00:00') >= hoy).slice(0,12);
-  const pasadas  = entregas.filter(e=>new Date(e.fecha.slice(0,10)+'T12:00:00') <  hoy).reverse().slice(0,6);
+  const proximas = entregas.filter(e=>new Date(e.fecha.slice(0,10)+'T12:00:00') >= hoy);
+  const pasadas  = entregas.filter(e=>new Date(e.fecha.slice(0,10)+'T12:00:00') <  hoy).reverse();
   const estadoBadge = {programada:'b-yellow',entregada:'b-green',cancelada:'b-gray',pagada:'b-dark'};
   const estadoLabel = {programada:'Programada',entregada:'Entregada',cancelada:'Cancelada',pagada:'Pagada'};
 
@@ -3657,15 +3657,26 @@ function renderCalendario(sucursalId, entregas) {
         : `<span class="badge b-green" style="font-size:.8rem;white-space:nowrap">Saldo al día ✓</span>`}
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px">
       <div>
-        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:14px">Proximas entregas</div>
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:14px">Próximas entregas</div>
         ${proximas.length ? proximas.map(cardEntrega).join('') : '<div class="empty">Sin entregas programadas.</div>'}
       </div>
       <div>
-        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:14px">Historial reciente</div>
-        ${pasadas.length ? pasadas.map(cardEntrega).join('') : '<div class="empty" style="font-size:.82rem;color:#bbb">Sin entregas pasadas.</div>'}
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:14px">Pendientes de pago</div>
+        ${(()=>{const pend=pasadas.filter(e=>parseFloat(e.costo||0)>parseFloat(e.monto_pagado||0)&&e.estado!=='pagada');return pend.length?pend.map(cardEntrega).join(''):'<div class="empty" style="font-size:.82rem;color:#bbb">Sin pendientes de pago ✓</div>';})()}
       </div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888">Historial completo (${pasadas.length})</div>
+        ${pasadas.length>5?`<button class="btn btn-sm btn-outline" onclick="toggleHistorial(this)" data-open="false">Ver todo ↓</button>`:''}
+      </div>
+      <div id="historial-list">
+        ${pasadas.slice(0,5).map(cardEntrega).join('')}
+      </div>
+      ${pasadas.length>5?`<div id="historial-extra" style="display:none">${pasadas.slice(5).map(cardEntrega).join('')}</div>`:''}
+      ${!pasadas.length?'<div class="empty" style="font-size:.82rem;color:#bbb">Sin entregas anteriores.</div>':''}
     </div>`;
 }
 
@@ -3801,6 +3812,15 @@ function verComprobante(id, tipo) {
         cont.innerHTML = `<iframe src="${objUrl}" style="width:100%;height:500px;border:none;border-radius:8px"></iframe>`;
       }
     }).catch(()=>{ cont.innerHTML = '<div style="color:#c0392b">No se pudo cargar el comprobante.</div>'; });
+}
+
+function toggleHistorial(btn) {
+  const extra = document.getElementById('historial-extra');
+  if(!extra) return;
+  const open = btn.dataset.open === 'true';
+  extra.style.display = open ? 'none' : 'block';
+  btn.dataset.open = !open;
+  btn.textContent = open ? 'Ver todo ↓' : 'Ver menos ↑';
 }
 
 async function abonarSucursal(sucursalId) {
