@@ -1224,11 +1224,12 @@ function go(s) {
 
 // ─── CARGA ─────────────────────────────────────────────────────────────────────
 async function loadAll() {
+  const safe = url => api('GET', url).catch(e => { console.error('loadAll error', url, e); return []; });
   const [lotes,verde,pedidos,cobros,clientes,productos,bolsas] = await Promise.all([
-    api('GET','/api/lotes'), api('GET','/api/verde'),
-    api('GET','/api/pedidos'), api('GET','/api/cobros'),
-    api('GET','/api/clientes'), api('GET','/api/productos'),
-    api('GET','/api/bolsas').catch(()=>[])
+    safe('/api/lotes'), safe('/api/verde'),
+    safe('/api/pedidos'), safe('/api/cobros'),
+    safe('/api/clientes'), safe('/api/productos'),
+    safe('/api/bolsas')
   ]);
   D = {lotes,verde,pedidos,cobros,clientes,productos};
   D_bolsas = bolsas||[];

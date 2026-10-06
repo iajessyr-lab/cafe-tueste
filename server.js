@@ -178,6 +178,88 @@ async function initDB() {
       ('Cafe tostado 1kg','bolsa',1000,0),
       ('Cafe a granel','granel',null,0)`);
   }
+  // Columnas adicionales — centralizadas aquí para no correr en cada request
+  await pool.query(`
+    ALTER TABLE ct_lotes ADD COLUMN IF NOT EXISTS peso_verde NUMERIC(8,2);
+    ALTER TABLE ct_lotes ADD COLUMN IF NOT EXISTS merma_pct NUMERIC(5,2);
+    ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS requiere_factura BOOLEAN DEFAULT FALSE;
+    ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS rfc VARCHAR(20);
+    ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300);
+    ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS uso_cfdi VARCHAR(100);
+    ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS factura_emitida BOOLEAN DEFAULT FALSE;
+    ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS archivado BOOLEAN DEFAULT FALSE;
+    ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS rfc VARCHAR(20);
+    ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300);
+    ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS encargado VARCHAR(150);
+    ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]';
+    ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS costo NUMERIC(12,2);
+    ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS monto_pagado NUMERIC(12,2) DEFAULT 0;
+    ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_data TEXT;
+    ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_nombre VARCHAR(300);
+    ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_mime VARCHAR(100);
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ct_egresos (
+      id SERIAL PRIMARY KEY,
+      fecha DATE NOT NULL,
+      tipo VARCHAR(20) DEFAULT 'Variable',
+      categoria VARCHAR(100),
+      subcategoria VARCHAR(100),
+      descripcion TEXT,
+      total NUMERIC DEFAULT 0,
+      metodo VARCHAR(50),
+      proveedor VARCHAR(200),
+      observaciones TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS ct_gastos_fijos (
+      id SERIAL PRIMARY KEY,
+      mes VARCHAR(7) NOT NULL,
+      categoria VARCHAR(100),
+      descripcion TEXT,
+      monto NUMERIC DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS ct_fichas_costo (
+      id SERIAL PRIMARY KEY,
+      nombre VARCHAR(200) NOT NULL,
+      tipo_grano VARCHAR(100),
+      origen VARCHAR(100),
+      tipo_tueste VARCHAR(100),
+      costo_kg NUMERIC(10,2) DEFAULT 0,
+      merma_pct NUMERIC(5,2) DEFAULT 18,
+      empaques JSONB DEFAULT '[]',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS ct_bolsas (
+      id SERIAL PRIMARY KEY,
+      nombre VARCHAR(200) NOT NULL,
+      gramos NUMERIC(8,2),
+      costo NUMERIC(10,2) DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    ALTER TABLE ct_fichas_costo ADD COLUMN IF NOT EXISTS tipo_tueste VARCHAR(100);
+    ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS responsable VARCHAR(150);
+    ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS notas TEXT;
+    ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS archivos JSONB DEFAULT '[]';
+    ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS archivado BOOLEAN DEFAULT FALSE;
+    ALTER TABLE ct_pagos ADD COLUMN IF NOT EXISTS archivos JSONB DEFAULT '[]';
+    ALTER TABLE ct_pagos ADD COLUMN IF NOT EXISTS lugar VARCHAR(300);
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS costo_produccion NUMERIC(10,2);
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS categoria VARCHAR(100);
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS tipo_tueste VARCHAR(100);
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS tipo_venta VARCHAR(50);
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS origen VARCHAR(100);
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS varietal VARCHAR(100);
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS altura VARCHAR(100);
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS comentarios TEXT;
+    ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS peso_g NUMERIC(8,2);
+  `);
+
   console.log('DB lista.');
 }
 
@@ -435,14 +517,6 @@ app.post('/api/orden-publica', async (req, res) => {
 
 // ─── PRODUCTOS ────────────────────────────────────────────────────────────────
 app.get('/api/productos', auth, async (req, res) => {
-  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS tipo_tueste VARCHAR(50)');
-  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS origen VARCHAR(100)');
-  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS varietal VARCHAR(100)');
-  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS altura VARCHAR(50)');
-  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS comentarios TEXT');
-  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS costo_produccion NUMERIC(10,2)');
-  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS tipo_venta VARCHAR(30)');
-  await pool.query('ALTER TABLE ct_productos ADD COLUMN IF NOT EXISTS categoria VARCHAR(30) DEFAULT \'cafe\'');
   const r = await pool.query('SELECT * FROM ct_productos WHERE activo=TRUE ORDER BY nombre');
   res.json(r.rows);
 });
@@ -469,15 +543,6 @@ app.post('/api/productos', auth, async (req, res) => {
 
 // ─── PEDIDOS ──────────────────────────────────────────────────────────────────
 app.get('/api/pedidos', auth, async (req, res) => {
-  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS requiere_factura BOOLEAN DEFAULT FALSE');
-  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS rfc VARCHAR(20)');
-  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300)');
-  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS uso_cfdi VARCHAR(100)');
-  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS factura_emitida BOOLEAN DEFAULT FALSE');
-  await pool.query('ALTER TABLE ct_pedidos ADD COLUMN IF NOT EXISTS archivado BOOLEAN DEFAULT FALSE');
-  await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS rfc VARCHAR(20)');
-  await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS razon_social VARCHAR(300)');
-  await pool.query('ALTER TABLE ct_clientes ADD COLUMN IF NOT EXISTS encargado VARCHAR(150)');
   const r = await pool.query(`
     SELECT p.*, json_agg(pi.*) as items
     FROM ct_pedidos p
@@ -543,10 +608,6 @@ app.delete('/api/pedidos/:id', auth, async (req, res) => {
 
 // ─── COBROS ───────────────────────────────────────────────────────────────────
 app.get('/api/cobros', auth, async (req, res) => {
-  await pool.query('ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS responsable VARCHAR(150)');
-  await pool.query('ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS notas TEXT');
-  await pool.query("ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS archivos JSONB DEFAULT '[]'");
-  await pool.query("ALTER TABLE ct_cobros ADD COLUMN IF NOT EXISTS archivado BOOLEAN DEFAULT FALSE");
   const r = await pool.query('SELECT * FROM ct_cobros ORDER BY creado_en DESC');
   res.json(r.rows);
 });
@@ -576,8 +637,6 @@ app.delete('/api/cobros/:id', auth, async (req, res) => {
 
 // ─── PAGOS ────────────────────────────────────────────────────────────────────
 app.get('/api/pagos', auth, async (req, res) => {
-  await pool.query('ALTER TABLE ct_pagos ADD COLUMN IF NOT EXISTS archivos JSONB DEFAULT \'[]\'');
-  await pool.query('ALTER TABLE ct_pagos ADD COLUMN IF NOT EXISTS lugar VARCHAR(300)');
   const r = await pool.query('SELECT * FROM ct_pagos ORDER BY fecha DESC');
   res.json(r.rows);
 });
@@ -628,12 +687,6 @@ app.put('/api/sucursales/:id', auth, async (req, res) => {
 
 // ─── ENTREGAS SUCURSAL ────────────────────────────────────────────────────────
 app.get('/api/sucursales/:id/entregas', auth, async (req, res) => {
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'");
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS costo NUMERIC(12,2)");
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS monto_pagado NUMERIC(12,2) DEFAULT 0");
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_data TEXT");
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_nombre VARCHAR(300)");
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_mime VARCHAR(100)");
   const r = await pool.query(
     'SELECT id,sucursal_id,fecha,productos,kg_total,estado,notas,items,costo,monto_pagado,comprobante_nombre,comprobante_mime FROM ct_entregas_sucursal WHERE sucursal_id=$1 ORDER BY fecha ASC',
     [req.params.id]
@@ -663,9 +716,6 @@ app.delete('/api/entregas-sucursal/:id', auth, async (req, res) => {
 app.post('/api/entregas-sucursal/:id/comprobante', auth, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No se recibió archivo.' });
   if (req.file.size > 5 * 1024 * 1024) return res.status(400).json({ error: 'El archivo no debe superar 5 MB.' });
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_data TEXT");
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_nombre VARCHAR(300)");
-  await pool.query("ALTER TABLE ct_entregas_sucursal ADD COLUMN IF NOT EXISTS comprobante_mime VARCHAR(100)");
   const b64 = req.file.buffer.toString('base64');
   const r = await pool.query(
     'UPDATE ct_entregas_sucursal SET comprobante_data=$1,comprobante_nombre=$2,comprobante_mime=$3 WHERE id=$4 RETURNING id,comprobante_nombre,comprobante_mime',
@@ -773,7 +823,6 @@ app.get('/api/fichas', auth, async (req, res) => {
     notas TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
-  await pool.query(`ALTER TABLE ct_fichas_costo ADD COLUMN IF NOT EXISTS tipo_tueste VARCHAR(100)`);
   const r = await pool.query('SELECT * FROM ct_fichas_costo ORDER BY created_at DESC');
   res.json(r.rows);
 });
