@@ -2869,28 +2869,32 @@ async function renderCostos() {
     return;
   }
   const costo_fijo_100g = currentGF ? calcGF(currentGF).costo100g : 0;
-  lista.innerHTML = D_fichas.map(f => {
+  const ttDot = {Ligero:'#fbbf24',Medio:'#f97316','Medio-Oscuro':'#ea580c',Oscuro:'#dc2626','Muy Oscuro':'#1c1917'};
+  lista.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">` +
+  D_fichas.map(f => {
     const r = calcCostos(f, costo_fijo_100g);
     const min = r.empaques.length ? Math.min(...r.empaques.map(e=>e.costoUnitario)) : null;
     const max = r.empaques.length ? Math.max(...r.empaques.map(e=>e.costoUnitario)) : null;
-    const ttLabel = {Ligero:'🟡 Ligero',Medio:'🟠 Medio','Medio-Oscuro':'🟠 Medio-Oscuro',Oscuro:'🔴 Oscuro','Muy Oscuro':'⚫ Muy Oscuro'};
-    return `<div class="item" style="cursor:default">
-      <div class="item-info" onclick="verFichaTecnica(${f.id})" style="cursor:pointer;flex:1">
-        <div class="item-title">${f.nombre}${f.tipo_tueste?` <span style="font-size:.75rem;color:#888;font-weight:400">· ${ttLabel[f.tipo_tueste]||f.tipo_tueste}</span>`:''}</div>
-        <div class="item-sub">${[f.origen,f.tipo].filter(Boolean).join(' · ')}${f.kg_comprados ? ` · ${f.kg_comprados}kg` : ''}</div>
+    const dot = f.tipo_tueste ? `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${ttDot[f.tipo_tueste]||'#aaa'};margin-right:5px;vertical-align:middle"></span>${f.tipo_tueste}` : '';
+    const sub = [f.origen, f.tipo].filter(Boolean).join(' · ') + (f.kg_comprados ? ` · ${f.kg_comprados} kg` : '');
+    return `<div style="background:#fff;border:1.5px solid #e8e8e8;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div onclick="verFichaTecnica(${f.id})" style="cursor:pointer">
+        <div style="font-size:.95rem;font-weight:700;margin-bottom:3px">${f.nombre}</div>
+        <div style="font-size:.75rem;color:#888">${sub}</div>
+        ${dot ? `<div style="font-size:.72rem;color:#666;margin-top:4px">${dot}</div>` : ''}
       </div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        ${min !== null ? `<div style="text-align:right">
-          <div style="font-size:.75rem;color:#aaa">Costo unitario</div>
-          <div style="font-size:.95rem;font-weight:600">${$m(min)}${min!==max?' – '+$m(max):''}</div>
-        </div>` : ''}
-        <button class="btn btn-sm btn-outline" onclick="verFichaTecnica(${f.id})">Ver ficha</button>
-        <button class="btn btn-sm btn-outline" onclick="abrirFicha(${f.id})">Editar</button>
-        <button class="btn btn-sm" style="background:#eafaf1;color:#1e8449;border-color:#a9dfbf" onclick="crearProductosDeFicha(${f.id})">→ Productos</button>
-        <button class="btn btn-sm" style="background:#fde8e8;color:#c0392b;border-color:#f5c0c0" onclick="eliminarFicha(${f.id})">Eliminar</button>
+      ${min !== null ? `<div style="background:#f8f8f8;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:.7rem;color:#aaa;text-transform:uppercase;font-weight:600">Costo unitario</span>
+        <span style="font-size:.9rem;font-weight:700;color:#111">${$m(min)}${min!==max?' – '+$m(max):''}</span>
+      </div>` : ''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:auto">
+        <button class="btn btn-sm btn-outline" style="flex:1" onclick="verFichaTecnica(${f.id})">Ver ficha</button>
+        <button class="btn btn-sm btn-outline" style="flex:1" onclick="abrirFicha(${f.id})">Editar</button>
+        <button class="btn btn-sm" style="background:#eafaf1;color:#1e8449;border-color:#a9dfbf;flex:1" onclick="crearProductosDeFicha(${f.id})">→ Productos</button>
+        <button class="btn btn-sm" style="background:#fde8e8;color:#c0392b;border-color:#f5c0c0" onclick="eliminarFicha(${f.id})">&#x2715;</button>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + `</div>`;
   renderBolsas();
 }
 
