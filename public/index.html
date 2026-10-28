@@ -3565,6 +3565,7 @@ function resetEntregaForm() {
   document.getElementById('m-entrega-titulo').textContent='Nueva entrega';
   document.getElementById('m-entrega-btn').textContent='Guardar';
   _editEntregaId=null;
+  if (_sucursalActiva) document.getElementById('ent-sucursal').value = _sucursalActiva;
 }
 
 async function renderSucursales() {
