@@ -3523,37 +3523,68 @@ let _editEntregaId = null;
 
 function buildEntregaItemHTML(eid, nombre, kg, bolsas) {
   const inp = 'padding:5px 8px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:.84rem;width:70px';
-  const prodOpts = D.productos.map(p=>`<option value="${p.nombre}"${p.nombre===nombre?` selected`:''}>` +
+  const prodOpts = D.productos.map(p=>`<option value="${p.nombre}" data-precio="${p.precio||0}"${p.nombre===nombre?` selected`:''}>` +
     `${p.nombre}${p.presentacion?' · '+p.presentacion:''}</option>`).join('');
   return `<div id="${eid}" style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:8px 10px;margin-bottom:6px">
-    <select onchange="this.nextElementSibling&&this.nextElementSibling.focus()" style="padding:5px 8px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:.84rem;width:100%;background:#fff">
+    <select onchange="aplicarPrecioEntregaItem(this,'${eid}')" style="padding:5px 8px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:.84rem;width:100%;background:#fff">
       <option value="">-- Producto --</option>${prodOpts}
     </select>
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
       <label style="font-size:.65rem;font-weight:700;color:#aaa;text-transform:uppercase">kg</label>
-      <input type="number" value="${kg||''}" min="0" step="0.1" placeholder="0" style="${inp}" oninput="">
+      <input id="${eid}-kg" type="number" value="${kg||''}" min="0" step="0.1" placeholder="0" style="${inp}" oninput="recalcEntregaCosto()">
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
       <label style="font-size:.65rem;font-weight:700;color:#aaa;text-transform:uppercase">bolsas</label>
       <input type="number" value="${bolsas||''}" min="0" step="1" placeholder="0" style="${inp}" oninput="">
     </div>
-    <button onclick="document.getElementById('${eid}').remove()" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:1.1rem;padding:4px">&#x2715;</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <label style="font-size:.65rem;font-weight:700;color:#aaa;text-transform:uppercase">$/kg</label>
+      <input id="${eid}-preciok" type="number" value="" min="0" step="0.01" placeholder="0" style="${inp};width:65px" oninput="recalcEntregaCosto()">
+    </div>
+    <button onclick="document.getElementById('${eid}').remove();recalcEntregaCosto()" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:1.1rem;padding:4px">&#x2715;</button>
   </div>`;
 }
 
-function addEntregaItem(nombre, kg, bolsas) {
+function aplicarPrecioEntregaItem(sel, eid) {
+  const opt = sel.options[sel.selectedIndex];
+  const precioEl = document.getElementById(eid+'-preciok');
+  if(precioEl && opt.value) precioEl.value = opt.dataset.precio||0;
+  recalcEntregaCosto();
+}
+
+function recalcEntregaCosto() {
+  let total = 0;
+  document.querySelectorAll('#ent-items-lista > div[id]').forEach(div => {
+    const kg = parseFloat(div.querySelector('[id$="-kg"]')?.value)||0;
+    const precio = parseFloat(div.querySelector('[id$="-preciok"]')?.value)||0;
+    total += kg * precio;
+  });
+  const costoEl = document.getElementById('ent-costo');
+  if(costoEl && total > 0) costoEl.value = total.toFixed(2);
+}
+
+function addEntregaItem(nombre, kg, bolsas, precio_unitario) {
   const eid = 'ei-'+Date.now()+Math.random().toString(36).slice(2,5);
   const el = document.getElementById('ent-items-lista');
   const div = document.createElement('div');
   div.innerHTML = buildEntregaItemHTML(eid, nombre||'', kg||'', bolsas||'');
   el.appendChild(div.firstChild);
+  if(precio_unitario) {
+    const precioEl = document.getElementById(eid+'-preciok');
+    if(precioEl) precioEl.value = precio_unitario;
+  }
 }
 
 function getEntregaItems() {
   return Array.from(document.querySelectorAll('#ent-items-lista > div[id]')).map(div=>{
-    const inputs = div.querySelectorAll('input');
     const sel = div.querySelector('select');
-    return {nombre: sel?.value||'', kg: parseFloat(inputs[0]?.value)||0, bolsas: parseInt(inputs[1]?.value)||0};
+    const kgEl = div.querySelector('[id$="-kg"]');
+    const bolsasInputs = div.querySelectorAll('input');
+    const bolsasEl = bolsasInputs[1];
+    const precioEl = div.querySelector('[id$="-preciok"]');
+    const kg = parseFloat(kgEl?.value)||0;
+    const precio_unitario = parseFloat(precioEl?.value)||0;
+    return {nombre: sel?.value||'', kg, bolsas: parseInt(bolsasEl?.value)||0, precio_unitario, subtotal: kg*precio_unitario};
   }).filter(i=>i.nombre);
 }
 
@@ -3693,7 +3724,7 @@ function abrirEditarEntrega(id) {
   document.getElementById('ent-fecha').value = e.fecha ? e.fecha.slice(0,10) : '';
   document.getElementById('ent-costo').value = e.costo||'';
   document.getElementById('ent-notas').value = e.notas||'';
-  (e.items||[]).forEach(i=>addEntregaItem(i.nombre, i.kg, i.bolsas));
+  (e.items||[]).forEach(i=>addEntregaItem(i.nombre, i.kg, i.bolsas, i.precio_unitario));
   document.getElementById('m-entrega-btn').textContent = 'Guardar cambios';
   openModal('m-entrega');
 }
